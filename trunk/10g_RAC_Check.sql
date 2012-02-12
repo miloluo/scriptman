@@ -514,7 +514,6 @@ FROM   TABLE(dbms_feature_usage_report.display_text);
 set linesize 120;
 column component format a20;
 column parameter format a20;
-
 alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
 select  * from v$sga_resize_ops;
 
