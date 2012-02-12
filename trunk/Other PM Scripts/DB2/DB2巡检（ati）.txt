@@ -1,0 +1,98 @@
+DB2巡检：
+
+
+
+1》平台版本
+uname -a
+
+
+2》平台性能
+Topas
+
+
+3》Db2版本
+db2level
+
+
+4》Db2日志检查
+tail -10000 /home/db2inst1/sqllib/db2dump/db2diag.log
+
+db2diag -l "Error,Severe"
+
+归档过大的日志：
+db2diag -A
+
+
+日志位置：
+windows下： 
+先用db2set -all 找到DB2INSTPROF对应的目录,然后再这个目录下去找到这个文件 
+AIX下: 
+先SU到实例用户下，然后进入实例目录的 sqllib/db2dump目录，db2diag.log就在这个目录下
+
+例如：（windows下）
+D:\Program Files\IBM\ISWarehouse\SQLLIB\BIN>db2set -all
+[e] DB2PATH=D:\Program Files\IBM\ISWarehouse\SQLLIB
+[i] DB2_AGENT_CACHING_FMP=OFF
+[i] DB2_RESTRICT_DDF=TRUE
+[i] DB2_COMPATIBILITY_VECTOR=FFF
+[i] DB2_FMP_COMM_HEAPSZ=25000
+[i] DB2INSTOWNER=HP-D3TV2K4E2U33
+[i] DB2PORTRANGE=60000:60003
+[i] DB2INSTPROF=C:\DOCUMENTS AND SETTINGS\ALL USERS\APPLICATION DATA\IBM\DB2\ISWCOPY01
+[i] DB2COMM=TCPIP
+[g] DB2_EXTSECURITY=YES
+[g] DB2SYSTEM=HP-D3TV2K4E2U33
+[g] DB2PATH=D:\Program Files\IBM\ISWarehouse\SQLLIB
+[g] DB2INSTDEF=DB2
+[g] DB2CLIINIPATH=D:\Program Files\IBM\ISWarehouse\SQLLIB
+[g] DB2ADMINSERVER=DB2DAS00
+
+结果db2diag.log就在C:\Documents and Settings\All Users\Application Data\IBM\DB2\ISWCOPY01\DB2\目录下
+
+
+
+
+
+5》Db2日志检查
+tail -10000 /home/db2inst1/sqllib/db2dump/db2inst1.nfy
+
+
+6》活动数据库
+$ db2 list db directory
+db2 list active databases
+
+
+7》表空间使用率及状态检查
+db2pd -db  $dbname -tablespaces
+
+
+8》数据库内存使用
+db2mtrk -d -v
+
+
+9》DB2环境变量
+db2set
+
+
+10》最近一次统计信息收集时间
+db2 connect to $dbname
+db2 "select max(stats_time) from syscat.tables"
+
+
+11》最近一次表数据重组时间
+db2 list history reorg all for  $dbname
+
+
+12》最近一次数据库备份时间
+db2 list history backup all for  $dbname
+
+
+13》锁使用情况
+db2pd -db $dbname -locks 
+
+
+14》快照
+db2 get snapshot for all on  $dbname
+
+
+15》db2top

@@ -1,0 +1,149 @@
+
+
+1》平台版本
+uname -a
+
+PICC实例：
+CBSDB:root:/var/mqm/errors> uname -a
+AIX CBSDB 3 5 00CE4FCC4C00
+
+
+2》平台性能
+topas	
+
+硬件报错：
+errpt
+
+3》MQ版本查询
+dspmqver
+
+
+4》队列管理器名称及状态
+dspmq
+
+实例：
+CBSDB:root:/home/root> dspmq
+QMNAME(QM_TARGET)                                         STATUS(Running)
+QMNAME(qm_test)                                           STATUS(Ended normally)
+
+
+
+5》未决交易
+dspmqtrn
+
+一般没有未决交易：
+CBSDB:root:/home/root> dspmqtrn
+There are no prepared transactions.
+
+
+
+6》Qmgr配置
+runmqsc XXXX   ----XXXX替换为：QM_TARGET，由dspmq得到
+
+q qmgr  ----在runmqsc XXXX下执行，可以查看可用命令
+
+	
+7》队列深度
+Dis ql(*) curdepth where (curdepth gt 0)    ----在runmqsc XXXX下执行
+
+	
+8》通道状态检查
+Dis chs(*)  ----在runmqsc XXXX下执行
+
+	
+9》退出Runmqsc XXXX
+end
+
+
+10》日志检查
+/var/mqm/errors	
+一般看最新的：AMQERR01.LOG
+
+
+/var/mqm/qmgrs/<QmgrName>/errors
+查看dspmq -> QMNAME(<QmgrName>)
+
+
+
+
+
+～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～
+1. 创建队列管理器
+   crtmqm -q QMA
+
+   （-q表示QMA为默认队列管理器）
+
+2. 启动队列管理器
+   strmqm QMA
+
+   （对于默认队列管理器，则为strmqm ）
+
+3. 启动管理器平台
+   runmqsc QMA
+
+4. 定义本地队列
+   define qlocal(queueA)
+
+   若用于队列管理器之间进行通信，这应为 define qlocal(queue1) usage(xmitq)
+
+5. 定义远程队列
+   define qremote(queue.remote) rname(apple.queue) rqmname('queueB') xmitq(queue1)
+   （apple.queue为远程队列管理器queueB中的本地队列）
+
+6. 定义发送端通道
+   define channel(queueA.queueB) chltype(sdr) conname('192.168.1.90(1414)') xmitq(queueA) trptype(tcp)
+
+7. 定义接受方通道
+   define channel(queueA.queueB) chltype(rcvr) trptype(tcp)
+
+8. 更改侦听端端口号
+   alter listener(system.default.listener.tcp) trptype(tcp) port(1415)
+
+9. 启动侦听
+   start listener(system.default.listener.tcp)
+   在命令行 c:\runmqlsr
+
+
+
+10. 列出侦听状态
+   display lsstatus(*)
+
+11. 测试， 向队列中放入消息
+   amqsput queue_name queue_manager_name
+
+    从队列中取出消息
+   amqsget queue_name queue_manager_name
+
+12. 在服务器方建立用于客户方链接的通道
+   define channel(channel2) chltype(svrconn) trptype(tcp) mcauser(' ')
+
+13. 在客户机方，使用MQSERVER定义客户机链接通道（如使用了Active Directory 服务支持，则可略过本步骤）
+    SET MQSERVER=CHANNEL1/TCP/192.168.1.90(1414)   //Windows
+    export MQSERVER=’CHANNEL1/TCP/server-hostname(port)’  //linux
+
+
+15.  测试， 向队列中放入消息
+    amqsputc queue_name queue_manager_name
+
+    从队列中取出消息
+    amqsgetc queue_name queue_manager_name
+
+16. 关闭队列管理器
+endmqm mqm_name
+endmqm -i mqm_name
+
+17. 结束所有侦听进程
+endmqlsr  -m mqm_name
+
+18. 查看WebSphere MQ版本号
+dspmqver
+
+19. 查看已有的MQ管理器
+dspmq
+
+20. 启动WebSphere MQ Explorer
+strmqcfg
+
+21. "dspmqfls" command to convert between real and transformed object names.
+～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～
+

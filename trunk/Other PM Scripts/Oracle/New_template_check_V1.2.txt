@@ -1,0 +1,335 @@
+1. OS configuration:
+prtconf
+bindprocessor -q
+oslevel
+
+
+lsps -s
+lsfs 
+df -k
+
+topas
+
+
+==========================================
+0. db version:
+select * from v$version;
+
+
+==========================================
+1. hw info: 
+
+
+-hw model: 
+prtconf ===> all the hw info 
+
+-cpu number(logic cpu numbers):  
+smtctl or bindprocessor -q
+
+
+-memory size:
+prtconf ==> memory size and paging size infomation
+
+-swap size:
+lsps -a
+lsps -s
+ 
+
+-db used file type:
+lsfs 
+
+ha sw: none
+
+os version: oslevel
+
+=========================================
+2. db fs description:
+df -k  ---> use percentage, such as temp dir
+
+
+
+==========================================
+3. performance status
+topas
+
+==> cpu, memory, i/o
+
+hang on on disk rate at above 80%
+
+df -k
+
+==========================================
+4. db configuration:
+
+--check instance name:
+select inst_id, instance_number, instance_name, host_name, status from gv$instance;
+
+--check service name
+show parameter service
+
+-- check rdbms version
+select * from v$version;
+
+--check  block size and block buffer
+show parameter block
+
+--check sga and pga size
+show parameter ga
+show sga
+
+select name, bytes/1024/1024 "MB" from v$sgainfo;
+
+--check share pool size
+show parameter shared 
+
+-- check tablespace size
+SELECT D.TABLESPACE_NAME,SPACE "Total(M)", SPACE-NVL(FREE_SPACE,0) "USED(M)",
+ROUND((1-NVL(FREE_SPACE,0)/SPACE)*100,2) "USED(%)",FREE_SPACE "FREE(M)"
+FROM
+(SELECT TABLESPACE_NAME,ROUND(SUM(BYTES)/(1024*1024),2) SPACE,SUM(BLOCKS) BLOCKS
+FROM DBA_DATA_FILES
+GROUP BY TABLESPACE_NAME) D,
+(SELECT TABLESPACE_NAME,ROUND(SUM(BYTES)/(1024*1024),2) FREE_SPACE
+FROM DBA_FREE_SPACE
+GROUP BY TABLESPACE_NAME) F
+WHERE  D.TABLESPACE_NAME = F.TABLESPACE_NAME(+)
+UNION ALL  --if have tempfile
+SELECT D.TABLESPACE_NAME,SPACE "Total(M)",
+USED_SPACE "USED(M)",ROUND(NVL(USED_SPACE,0)/SPACE*100,2) "USED(%)",
+NVL(FREE_SPACE,0) "FREE(M)"
+FROM
+(SELECT TABLESPACE_NAME,ROUND(SUM(BYTES)/(1024*1024),2) SPACE,SUM(BLOCKS) BLOCKS
+FROM DBA_TEMP_FILES
+GROUP BY TABLESPACE_NAME) D,
+(SELECT TABLESPACE_NAME,ROUND(SUM(BYTES_USED)/(1024*1024),2) USED_SPACE,
+ROUND(SUM(BYTES_FREE)/(1024*1024),2) FREE_SPACE
+FROM V$TEMP_SPACE_HEADER
+GROUP BY TABLESPACE_NAME) F
+WHERE  D.TABLESPACE_NAME = F.TABLESPACE_NAME(+);
+
+-- check if the tablespace is on raw device
+-- /dev/xxx ==> raw
+-- /dirname/ ==> fs
+-- +dg ==> asm ==> raw
+-- check if the tablespace is on raw device
+col tbs_name for a20;
+col df_name for a50;
+select ts.name tbs_name, t.name df_name from v$tablespace ts,
+(select ts#, name from v$datafile
+union all 
+select ts#, name from v$tempfile) t
+where t.ts# = ts.ts#;
+
+
+--check if the tablespace are extented
+col file_name for a45;
+SELECT TABLESPACE_NAME, FILE_NAME, AUTOEXTENSIBLE FROM DBA_DATA_FILES ORDER BY 1;
+
+
+--check if the db is in archive log mode
+archive log list
+
+--check the datafile number
+select count(name) from v$datafile;
+
+
+--check tablespace numbers
+select count(*) from dba_tablespaces;
+
+-- check temp space
+select tablespace_name, (sum(bytes_used)+sum(bytes_free))/1048576 "Total space(MB)",
+sum(bytes_used)/1048576 "Used(MB)",  sum(bytes_free)/1048576 "Free(MB)", 
+sum(bytes_used)/(sum(bytes_used)+sum(bytes_free))*100 "Used rate(%)" 
+from v$temp_space_header
+group by tablespace_name ;
+
+crs_stat -t
+
+sqlplus / as sysdba @?/rdbms/admin/awrrpt
+cd $ORACLE_BASE/admin/$ORACLE_SID/bdump/
+ftp alert_<sid>.log
+ftp 130.89.200.16 
+
+
+
+upload bdump file and udump file and cdump if there is any.
+
+
+==========================================
+5. check bdump and alert log
+show parameter dump
+check $ORACLE_BASE/admin/$ORACLE_SID/bdump/alert<sid>.log
+
+
+ftp 130.89.200.16 
+log log
+
+
+crs_stat -t
+
+sqlplus / as sysdba @?/rdbms/admin/awrrpt
+
+
+--check if the tablespace are extented
+--从上面的条件去过滤空间小的表空间是否自动扩展，如果不是自动扩展，写入报告，提醒客户。
+col file_name for a45;
+SELECT TABLESPACE_NAME, FILE_NAME, AUTOEXTENSIBLE FROM DBA_DATA_FILES ORDER BY 1;
+
+
+6. 其他检查 or AWR：
+
+1》日志分析
+alert.log 分析，有无ORA报错
+
+SQL> show parameter dump
+[root@CXDB#] cat alert_CISG2.log
+
+
+2》数据文件及表空间状态使用率
+col Tablespace_name for a20
+select a.file_id "FileNo",a.tablespace_name "Tablespace_name",
+round(a.bytes/1024/1024,4) "Total MB",
+round((a.bytes-sum(nvl(b.bytes,0)))/1024/1024,4) "Used MB",
+round(sum(nvl(b.bytes,0))/1024/1024,4) "Free MB",
+round(sum(nvl(b.bytes,0))/a.bytes*100,4)  "%Free"
+from dba_data_files a, dba_free_space b
+where a.file_id=b.file_id(+)
+group by a.tablespace_name,
+a.file_id,a.bytes order by a.tablespace_name;
+
+	
+3》SGA、PGA内存
+SQL> show sga
+SQL> show parameter pga
+
+
+4》实例效率
+做AWR，在awr中截图
+
+SQL> @ $ORACLE_HOME/rdbms/admin/awrrpt.sql
+
+
+5》Shared pool
+做AWR，在awr中截图
+
+SQL> @ $ORACLE_HOME/rdbms/admin/awrrpt.sql
+
+
+6》等待事件
+做AWR，在awr中截图
+
+SQL> @ $ORACLE_HOME/rdbms/admin/awrrpt.sql
+
+
+
+
+
+
+====》非10g的库：
+4》实例效率
+
+PROMPT --************************************************
+PROMPT -- ** 项目：缓冲区命中率（Buffer Cache）
+PROMPT -- ** 等级：中
+PROMPT -- ** 正常值：>95%
+PROMPT -- ** 说明：如果发现该值低于90%，马上报告
+PROMPT -- ** 监控频度：定期
+PROMPT -- ** Sql：BufferHitRatio.sql
+PROMPT
+
+SELECT (1 - (SUM(DECODE(NAME, 'physical reads', VALUE, 0)) /
+(SUM(DECODE(NAME, 'db block gets', VALUE, 0)) +
+SUM(DECODE(NAME, 'consistent gets', VALUE, 0))))) * 100 
+"缓冲区命中率"
+FROM V$SYSSTAT;
+
+
+PROMPT --************************************************
+PROMPT -- ** 项目：内存排序百分比（Sort in Memory）
+PROMPT -- ** 等级：中
+PROMPT -- ** 正常值：>95%
+PROMPT -- ** 说明：如果发现该值低于90%，马上报告
+PROMPT -- ** 监控频度：定期
+PROMPT -- ** Sql：MemorySortRatio.sql
+PROMPT
+
+select a.value "磁盘排序",
+b.value "内存排序",
+round((100 * b.value) /decode((a.value + b.value), 0, 1, (a.value + b.value)),2) "内存排序百分比"
+from v$sysstat a, v$sysstat b
+where a.name = 'sorts (disk)'
+and b.name = 'sorts (memory)';
+
+
+PROMPT --************************************************
+PROMPT -- ** 项目：重做日志命中率
+PROMPT -- ** 等级：中
+PROMPT -- ** 正常值：>95%
+PROMPT -- ** 说明：如果发现该值低于90%，马上报告
+PROMPT -- ** 监控频度：定期
+PROMPT -- ** Sql：RedoHitRatio.sql
+PROMPT
+
+SELECT name, gets, misses, immediate_gets, immediate_misses, 
+100 - Decode(gets,0,0,misses/(gets+misses))*100 ratio1, 
+100 - Decode(immediate_gets+immediate_misses,0,0,immediate_misses/(immediate_gets+immediate_misses))*100 ratio2 
+FROM v$latch WHERE name IN ('redo allocation', 'redo copy');
+
+
+
+5》Shared pool
+
+PROMPT --************************************************
+PROMPT -- ** 项目：数据字典命中率（Dictionary Cache）
+PROMPT -- ** 等级：中
+PROMPT -- ** 正常值：>95%
+PROMPT -- ** 说明：如果发现该值低于90%，马上报告
+PROMPT -- ** 监控频度：定期
+PROMPT -- ** Sql：DictionaryHitRatio.sql
+PROMPT
+
+SELECT (1 - (SUM(GETMISSES) / SUM(GETS))) * 100 "数据字典命中率"
+FROM V$ROWCACHE;
+
+
+PROMPT --************************************************
+PROMPT -- ** 项目：库缓存命中率（Library Cache）
+PROMPT -- ** 等级：中
+PROMPT -- ** 正常值：>95%
+PROMPT -- ** 说明：如果发现该值低于90%，马上报告
+PROMPT -- ** 监控频度：定期
+PROMPT -- ** Sql：LibraryHitRatio.sql
+PROMPT
+
+SELECT SUM(PINS) / (SUM(PINS) + SUM(RELOADS)) * 100 "库缓存命中率"
+FROM V$LIBRARYCACHE;
+
+
+
+
+6》等待事件
+
+PROMPT --************************************************
+PROMPT -- ** 项目：锁与等待
+PROMPT -- ** 等级：中
+PROMPT -- ** 正常值：
+PROMPT -- ** 说明：发现并报告锁与等待的对象
+PROMPT -- ** 监控频度：多次
+PROMPT -- ** Sql：LockAndWait.sql
+PROMPT
+
+SELECT /*+ rule */ lpad(' ',decode(l.xidusn ,0,3,0))||l.oracle_username User_name, 
+o.owner,o.object_name,o.object_type,s.sid,s.serial# 
+FROM v$locked_object l,dba_objects o,v$session s 
+WHERE l.object_id=o.object_id AND l.session_id=s.sid 
+ORDER BY o.object_id,xidusn DESC;
+
+
+col event for a40
+select *
+  from (select  event, time_waited
+          from v$system_event
+        order by time_waited desc)
+  where rownum < 11 ;
+---v$system_event记录数据库自启动以来等待事件的汇总，通过查询可以快速得到数据库等待事件的总体概况，了解数据运行的基本状态。
+

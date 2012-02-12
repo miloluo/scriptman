@@ -1,0 +1,63 @@
+1. 查询mysql版本
+mysqladmin -uroot -p version
+或者进入到了mysql>提示符里，输入 status
+
+
+2. 查看一些项
+show status;
+
+
+3. 查看线程明细
+show processlist;
+show status like 'Threads%';
+
+4. 查看库明细
+show databases;
+show table status from <db_name>;
+
+
+5. 查看host_name.err有无最近报错。
+
+
+SQL> r
+  1  select lpad(' ', decode(l.xidusn,0,3,0)) || l.oracle_username user_name,
+  2  o.owner, o.object_name, o.object_type, s.sid, s.serial#
+  3  from v$locked_object l, dba_objects o, v$session s
+  4  where l.object_id=o.object_id and l.session_id=s.sid
+  5* order by o.object_id, xidusn desc
+
+USER_NAME  OWNER      OBJECT_NAME          OBJECT_TYP        SID    SERIAL#
+---------- ---------- -------------------- ---------- ---------- ----------
+SCOTT      SCOTT      EMP                  TABLE              24         31
+   SCOTT   SCOTT      EMP                  TABLE              32         57
+
+SQL> r
+  1  select lpad(' ', decode(l.xidusn,0,3,0)) || l.oracle_username user_name,
+  2  o.owner, o.object_name, o.object_type, s.sid, s.serial#
+  3  from v$locked_object l, dba_objects o, v$session s
+  4  where l.object_id=o.object_id and l.session_id=s.sid
+  5* order by o.object_id, xidusn desc
+
+USER_NAME  OWNER      OBJECT_NAME          OBJECT_TYP        SID    SERIAL#
+---------- ---------- -------------------- ---------- ---------- ----------
+SCOTT      SCOTT      EMP                  TABLE              24         31
+   SCOTT   SCOTT      EMP                  TABLE              32         57
+
+SQL> 
+SQL> 
+SQL> select prev_sql_addr from v$session where sid=24;
+
+PREV_SQL
+--------
+29AD1AE4
+
+SQL> 
+SQL> 
+SQL> select sql_text from v$sqlarea where address='29AD1AE4';
+
+SQL_TEXT
+------------------------------------------------------------------------------------------------------------------------
+BEGIN DBMS_OUTPUT.GET_LINES(:LINES, :NUMLINES); END;
+
+
+

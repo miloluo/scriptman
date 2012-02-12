@@ -1,0 +1,55 @@
+MQ检查方法 （picc需要root执行）
+
+
+
+1》队列管理器名称及状态
+dspmq
+
+PICC实例：
+CBSDB:root:/home/root> dspmq
+QMNAME(QM_TARGET)                                         STATUS(Running)
+QMNAME(qm_test)                                           STATUS(Ended normally)
+
+
+
+2》未决交易
+dspmqtrn
+
+一般没有未决交易：
+CBSDB:root:/home/root> dspmqtrn
+There are no prepared transactions.
+
+
+3》平台版本
+uname -a
+
+PICC实例：
+CBSDB:root:/var/mqm/errors> uname -a
+AIX CBSDB 3 5 00CE4FCC4C00
+
+
+4》平台性能
+topas	
+
+
+5》Qmgr配置
+runmqsc XXXX   ----XXXX替换为：QM_TARGET，由dspmq得到
+
+q qmgr  ----在runmqsc XXXX下执行，可以查看可用命令
+
+	
+6》队列深度
+Dis ql(*) curdepth where (curdepth gt 0)    ----在runmqsc XXXX下执行
+
+	
+7》通道状态检查
+Dis chs(*)  ----在runmqsc XXXX下执行
+
+	
+8》退出Runmqsc XXXX
+end
+
+
+9》日志检查
+/var/mqm/errors	
+一般看最新的：AMQERR01.LOG

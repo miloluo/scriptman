@@ -1,0 +1,1308 @@
+查看HP UNIX小型机的信息的命令集(一)
+1、机型 
+#model 
+9000/800/L2000-44 
+注意：其中44是指每个cpu有440MHZ。 
+2、cpu个数 
+#top 
+CPU LOAD USER NICE SYS IDLE BLOCK SWAIT INTR SSYS 
+0 0.02 0.0% 0.0% 0.% 0.0% 0.0% 0.0% 0.0% 
+1 0.00 0.6% 0.0% 0.% 0.0% 0.0% 0.0% 0.0% 
+2 0.00 2.% 97.0% 0.0% 0.0% 0.0% 0.0% 
+3 0.00 0.4% 0.0% 0.0% 99.6% 0.0% 0.0% 0.0% 0.0% 
+3、硬盘的大小信息 
+#diskinfo /dev/rdsk/c1t0d0 
+SCSI describe of c1t0d0: 
+vendor: SEAGATE 
+product id: ST39204LC 
+type: direct access 
+size: 8891556 Kbytes 
+bytes per sector: 512 
+4、硬盘的个数 
+#ioscan -funC disk 
+disk 0 0/0/1/1.0.0 sdisk CLAIMED DEVICE SEAGATE ST39204LC 
+/dev/dsk/c1t0d0 /dev/rdsk/c1t0d0 
+disk 1 0/0/1/1.2.0 sdisk CLAIMED DEVICE SEAGATE ST39204LC 
+/dev/dsk/c1t2d0 /dev/rdsk/c1t2d0 
+disk 2 0/0/2/0.0.0 sdisk CLAIMED DEVICE SEAGATE ST39204LC 
+/dev/dsk/c2t0d0 /dev/rdsk/c2t0d0 
+disk 3 0/0/2/0.2.0 sdisk CLAIMED DEVICE SEAGATE ST39204LC 
+/dev/dsk/c2t2d0 /dev/rdsk/c2t2d0 
+disk 4 0/0/2/1.2.0 sdisk CLAIMED DEVICE HP DVD-ROM 305 
+/dev/dsk/c3t2d0 /dev/rdsk/c3t2d0 
+disk 5 0/4/0/0.8.0 sdisk CLAIMED DEVICE SEAGATE ST39236LC 
+/dev/dsk/c4t8d0 /dev/rdsk/c4t8d0 
+5、查看操作系统版本和license 
+#uname -a 
+HP-UX scp1 B.11.00 U 9000/800 1124961527 unlimited-user license 
+6、如何查看内存 
+#dmesg 
+Memory Information: 
+physical page size = 4096 bytes, logical page size = 4096 bytes 
+Physical: 2097152 Kbytes, lockable: 1866308 Kbytes, available: 1902728 Kbyts 
+7、如何查看文件系统 
+#bdf 
+Filesystem kbytes used avail %used Mounted on 
+/dev/vg00/lvol3 1025617 24790 898265 3% / 
+/dev/vg00/lvol1 700691 35482 595139 6% /stand 
+/dev/vg00/lvol8 2097152 436927 1557195 22% /var 
+/dev/vg00/lvol7 1048576 481524 531631 48% /usr 
+/dev/vg00/lvol6 255253 148 229579 0% /tmp 
+/dev/vg01/lv_tellin 
+2051553 127152 1719245 7% /tellin 
+/dev/vg00/lvol5 2097152 81783 1889462 4% /opt 
+/dev/vg01/lv_informix 
+2051553 413823 1432574 22% /opt/informix 
+/dev/vg00/lvol4 524288 1229 490375 0% /home
+存在两个文件中：/etc/fstab /etc/mnttab 
+8、查看卷组、卷组所包括的逻辑卷、以及该卷组所包括的物理磁盘 
+#vgdisplay -v vg00 
+则结果都是按照逻辑卷组、逻辑卷、物理磁盘的顺序全部显示。
+9、查看卷组、逻辑卷的位置 
+#cd /dev/ 
+在该目录下面有所有的逻辑卷组，再进入某个逻辑卷组，则看到它所有的所有 
+逻辑卷了。 
+10、激活/去激活卷组 
+#vgchange -a y 卷组名 （激活） 
+#vgchange -a n 卷组名 （去激活） 
+11、创建卷组、逻辑卷、文件系统的一系列命令 
+格式化 
+#pvcreate /dev/rdsk/c0t1d0 (这里假设有块盘的设备文件名是c0t1d0) 
+创建卷组名 
+#mkdir /dev/vglock 
+创建卷组的设备文件名字 
+#mknod /dev/vglock/group c 64 0x010000 (这里注意group不能重复) 
+创建卷组 
+#vgcreate /dev/vglock /dev/dsk/c0t1d0 （将物理磁盘c0t1d0加给该卷组） 
+激活卷组 
+#vgchange -a y /dev/vglock 
+创建逻辑卷lv_informix 
+#lvcreate -n lv_informix /dev/vglock 
+给逻辑卷增加大小 
+#lvextend -l 50 /dev/vglock/lv_informix (单位是页，页的大小再创建 
+卷组时已经确定，不可以再更改，一般缺省为4M，所以是200M) 
+或者 
+#lvextend -L 200 /dev/vglock/lv_informix (这是带大写的L参数，表示 
+是以M为单位来分配的大小的。)
+如果还要将该卷组变为文件系统的话，那么如下创建文件系统 
+#newfs -F hfs /dev/vglock/rlv_informix 
+创建文件系统挂接的目录 
+#mkdir /informix 
+将文件系统挂接上去 
+#mount /dev/vglock/lv_informix /informix
+12、删除卷组、逻辑卷 
+删除逻辑卷 
+#lvremove /dev/vglock/lv_informix 
+去激活卷组 
+#vgchange -a n /dev/vglock (如果不能够去激活，则可以用如下命令强行去 
+激活，vgchange -c n /dev/vglock) 
+预删除卷组 
+#vgexport -p -s -m /tmp/vglock.map /dev/vglock 
+删除卷组 
+#vgexport -s -m /tmp/vglock.map /dev/vglock 
+13、创建共享卷组 
+在的一台已经创建卷组的机器上先去激活 
+#vgchange -a n /dev/vglock 
+预删除卷组 
+#vgexport -p -s -m /tmp/vglock.map /dev/vglock 
+将map文件传送到另外一台机器 
+#rcp scp1:/tmp/vglock.map scp2:/tmp/vglock.map 
+在另外一台机器上导入卷组之前要先创建卷组名 
+#mkdir /dev/vglock 
+创建group节点文件 
+#mknod /dev/vglock/group c 64 0x010000 (该节点一定要和第一台机器一致) 
+导入卷组 
+#vgimport -s -m /tmp/vglock.map /dev/vglock
+14、informix的版本的收集 
+#su - informix 
+informix>onstat - 
+这样可以看到informix的版本。 
+15、双机维护命令 
+在一台运行以下命令先将两个节点的cluster守护进程都拉起来， 
+然后还会自动的将应用也拉起来。 
+cmruncl; 
+或者先在主机上运行双机的守护进程，再将备机节点加入， 
+然后再来将应用制定在某个节点上运行，那么指定的节点就应该是主机。 
+cmruncl -n scp1; 
+cmrunnode scp2; 
+cmrunpkg -n scp1 -v scp_service; 
+查看双机的状态 
+cmviewcl -v； 
+cmviewcl ; 
+cmquerycl; 
+cmviewconf; 
+双机切换 
+方法一：可以停止主机 
+cmhaltnode scp1 
+方法二：可以手工切换应用 
+cmhaltpkg -n scp1 -v scp_service(将应用scp_service从scp1机器上停止运行) 
+或者 
+su - tellin 
+stellin>kill_scp.sh 
+或者 
+su - informix 
+informix>onmode -kuy 
+主机切换后的节点要重新变为可以切换的节点，必需要运行如下命令 
+cmmodepkg e -n scp1 -v scp_service (应用scp_service可以下次再切回 
+scp1节点) 
+有时候为了诊断备机，特将备机设置为不可以运行应用的节点，如 
+cmmodepkg d -n scp1 -v scp_service (节点scp1上是不可以运行应用scp_ 
+service) 
+16、双机的配置文件的位置 
+#cd /etc/cmcluster/ (双机守护进程的配置文件cmcluster.asc) 
+#cd /etc/cmcluster/scppkg/ (双机的应用配置文件scppkg.asc,control.sh, 
+scppkg.sh，这三个文件中有一个文件是用来制定双机的浮动IP的) 
+17、双机维护命令的位置 
+#cd /usr/sbin/ (用ls cm*可以看到所有关于双机的执行命令) 
+18、双机的配置 
+》》》配置cmcluster.asc; 
+检查cmcluster.asc配置文件的有效性 
+#cmcheckconf -v -C cmcluster.asc 
+如果配置不对，则会有错误提示，根据错误提示再来更正， 
+直到正确后才来应用该配置文件 
+#cmapplyconf -f -v -C cmcluster.asc 
+如果觉得应用后配置要重新更改，可以将配置文件删除 
+#cmdeleteconf -v -c scp1 
+#cmdeleteconf -v -c scp2 
+》》》配置应用文件scppkg.asc,control.sh,scppkg.sh 
+检查三个文件的有效性 
+#cmcheckconf -v -P scppkg.asc 
+如果配置不对，则会有错误提示，根据错误提示再来更正， 
+直到正确后才来应用该配置文件 
+#cmapplyconf -f -v -C scppkg.asc 
+如果觉得应用后配置要重新更改，可以将配置文件删除 
+#cmdeleteconf -v -c scp1 
+#cmdeleteconf -v -c scp2 
+备注：这里所指的删除是在需要单机诊断双机的时候才会用到， 
+否则不需要这么负责，只需要重新应用一下就可以了，原来的 
+删不删除无所谓。 
+18、网络的配置 
+》》》首先网线一定要连接正确 
+在给小型机配置网卡的时候一定要先确保网卡的驱动程序已经 
+安装了，用以下的命令查看. 
+#lanscan 
+如果看到的主用网卡和附加的网卡的状态都是up状态，则表示 
+网卡都可用了。而且此时一定要知道那块卡用来做数据网卡， 
+这块网卡应该是在安装HP-UX操作系统的时候就已经确定了，比如 
+选择lan0来做主用数据网卡，并且该块网卡的地址一般在安装 
+HP-UX的时候也已经显示了它的设备路径如：0/1/10/0 等， 
+或者用lanscan命令也可以看到它的路径，指导后就应该将直连网线 
+从该网扣连接到主用HUB上去。 
+然后另外两块是备用网卡，也可以根据设备的路径来确定他们两个的位置， 
+确定以后就可以将其中一块卡用交叉网线与另外一台机器的同样的网口 
+相连，用来做心跳线。 
+那么另外的一个附加网卡就不要配置地址了，我们是用它来作为备用网卡 
+使用的，要用直连网线从该口连接到备用HUB上，它既可以作为心跳网卡 
+的备用网卡，也可以作为数据网卡的备用网卡。 
+在HPL2000系列的机器上我们还可以看到在数据网卡的上面有一个网扣，该 
+口是作为console口使用的，用一根console线可以与它相连接进行配置机器。
+》》》再来配置IP地址 
+#vi /etc/rc.config.d/netconf 
+该文件下面有所有的网卡的名字、网卡的iP地址、网关、子网掩码的配置 
+这样配置以后可以长期生效，下次机器重新启动的时候就会根据该配置文 
+件来自动配置网络了。 
+或者 
+#ifconfig lan0 133.64.48.91 255.255.255.192 
+#ifconfig lan1 129.9.168.120 255.255.255.192
+》》》查看网卡的地址 
+#lanscan lan0 
+#lanscan lan1 
+lan2不配置地址。 
+》》》网卡的常用诊断工具 
+ping; 
+lanscan;看看网卡地状态是否为“up” 
+linkloop;(用此命令的时候，一定要先用lanscan来查处网卡的物理地址， 
+因为该命令的后面接的参数是网卡物理地址，这可以简单地断定网线、集线器 
+是否有问题) 
+》》》在同一网中， subnetmask 应一致。 
+19、在配置双机的cmcluster.asc的时候要制定该网卡的IP地址所在的子网 
+，则可以通过以下来查看 
+#netstat -in （可以看到网卡的地址、IP地址对应的子网、网关、缺省路由、 
+是否有浮动网卡、是否主机） 
+20、配置路由信息 
+方法一：可以通过修改/etc/rc.confg.d/netconf文件来增加，下次启动的时候 
+就会生效。 
+方法二：可以用命令行来设置： 
+/usr/sbin/route add default 20.08.28.98 1 
+21、查看路由信息 
+#netstat -an 
+22、配置远程维护 
+如何确定是否已经配置了远程维护，远程维护是通过硬件来配置的， 
+只要远程维护的串口没有损坏，哪怕你是重新安装，在小型机前面板上的 
+remote灯会亮为黄色，黄色的灯一直都是两着的表示可以远程维护串口正常。 
+但是我们还是需要通过GSP来配置远程维护。 
+》》》小型机的remote口的配置 
+ctrl + b 
+enter 
+enter 
+GSP> ca 
+这样就出现了对话框，如果你要修改某个参数的话，可以通过该对话框来修改。 
+通常的值是： 
+bitrate :9600 
+flow control :software 
+terminal type:vt100 
+modem protocol:CCITT 
+modem bit rate:9600 
+flow control :hardware 
+mode transmit configuration:disable 
+mode presence:always connected
+》》》modem上的配置 
+AT&F 
+ATS0=1 
+AT&WO&Y0 
+保存退出。 
+备注：HP公司一般提供了专门的全向modem，名字叫“天幕驰舟”， 
+modem一定要接在line口上。
+23.一个超级命令 
+#set_parms 
+它后面带的参数可以是如下 
+date_time:设者时间； 
+ip_address：设置网卡地址； 
+hostname：设置主机名； 
+addl_netwrk：设置主机的网关。 
+24、用户和用户组的添加 
+方法一：用useradd和groupadd命令来添加； 
+方法二：修改文件/etc/passwd 和 /etc/group 文件来实现。
+25、一个有用的工具是sam 
+通过sam可以进行各种操作，比如：用户、用户组的管理；逻辑卷组、逻辑卷的管理；内核参数的管理；
+26、一个有用的诊断工具mstm 
+用它可以收集到所有的硬件信息，比如一共有哪些内存插口， 
+每块现有的内存条有多大，还可以查几个内存条等等信息。 
+使用举例： 
+#mstm 
+选择system()，并且在菜单上选中Tools/information/information log 
+便可以看到很多关于硬件的消息，如： 
+System Information for (scp1) 
+HPUX Model Number......: L2000 //机器型号是HP L2000 
+HPUX Model String......: 9000/800/L2000-44 
+Original Product Number: A5191A 
+Current Product Number.: 
+System Serial Number...: (Unknown) 
+Hversion...............: 0x5c40 
+Sversion...............: 0x491 
+Software Capabilities..: 0x100000f0 
+PD CPU Information: 
+Number of CPUs in the current Protection Domain = 2 //两个cpu 
+Cabinet 0; Cell 0; CPU Map 
+cpu ------------------------------------------------- 
+slot |00|01|02|03|04|05|06|07|08|09|10|11|12|13|14|15| 
+------------------------------------------------- 
+state| a| | | | | | | | | | | | | | | | 
+------------------------------------------------- 
+c - Configured (CPU powered on) 
+d - De-configured (CPU powered off) 
+a - Active (configured and processes running)
+选择memory，并且在菜单上选中Tools/information/information log 
+便可以看到关于内存的信息，如： 
+-- Information Tool Log for MEMORY on path 8 -- 
+Log creation time: Wed Jul 3 17:05:47 2002 
+Hardware path: 8
+Basic Memory Description 
+Module Type: MEMORY 
+Total Configured Memory : 1024 MB //可以看到总的内存有多少，是1G 
+Page Size: 4096 Bytes 
+Memory interleaving is supported on this machine and is ON. 
+Memory Board Inventory 
+DIMM Slot Size (MB) 
+--------- --------- 
+0a 256 //可以看到每个内存槽里面是不是已经插了内存条，还有 
+该内存条是多少的内存，比如这里0a槽上插的是256M 
+1a 256 
+0b 256 
+1b 256 
+--------- --------- //可以看出该台小型机的4个内存槽都已经插满了 
+System Total (MB): 1024
+Memory Error Log Summary 
+The memory error log is empty. 
+Page Deallocation Table (PDT) 
+PDT Entries Used: 0 
+PDT Entries Free: 50 
+PDT Total Size: 50 
+在使用mstm的时候可以打开另外一个终端窗口，执行命令#/usr/sbin/ioscan -fn ，这样可以知道每个设备 
+的硬件地址信息。
+这样可以得到如下结果： 
+lan 2 0/7/0/0 btlan6 CLAIMED INTERFACE HP A3738A PCI 10/100Base-TX Ultimate Combo 
+/dev/diag/lan2 /dev/ether2 /dev/lan2 
+memory 0 8 memory CLAIMED MEMORY Memory 
+processor 0 160 processor CLAIMED PROCESSOR Processor 
+processor 1 166 processor CLAIMED PROCESSOR Processor 
+这样可以知道0/7/0/0地址对应的是一个100M的网卡，然后再到mstm窗口中去查看它的information log 
+信息，这样可以很清楚硬件信息了。
+该收集结果文件中还可以找到磁盘的使用信息，如： 
+I H/W Path Driver S/W State Description ==================================================================== 0 0/0/1/1.2.0 sdisk CLAIMED SEAGATE ST39204LC 1 0/0/2/1.2.0 sdisk CLAIMED HP DVD-ROM 304 2 0/3/0/0.0.0 sdisk CLAIMED HP C5447A 4 0/3/0/0.0.1 sdisk CLAIMED HP C5447A 6 0/3/0/0.0.2 sdisk CLAIMED HP C5447A 8 0/3/0/0.0.3 sdisk CLAIMED HP C5447A 10 0/3/0/0.0.4 sdisk CLAIMED HP C5447A 12 0/3/0/0.0.5 sdisk CLAIMED HP C5447A 3 0/6/0/0.1.0 sdisk CLAIMED HP C5447A 5 0/6/0/0.1.1 sdisk CLAIMED HP C5447A 7 0/6/0/0.1.2 sdisk CLAIMED HP C5447A 9 0/6/0/0.1.3 sdisk CLAIMED HP C5447A 11 0/6/0/0.1.4 sdisk CLAIMED HP C5447A 13 0/6/0/0.1.5 sdisk CLAIMED HP C5447A Device H/W Path Product id Size Physical Alternate (Mbytes) Volume Link ==================================================================== c1t2d0 0/0/1/1.2.0 ST39204LC 8683 yes bootable no c3t2d0 0/0/2/1.2.0 DVD-ROM 0 no n/a c4t0d0 0/3/0/0.0.0 C5447A 1024 yes no c4t0d1 0/3/0/0.0.1 C5447A 2052 yes no c4t0d2 0/3/0/0.0.2 C5447A 10252 yes no c4t0d3 0/3/0/0.0.3 C5447A 1024 no n/a c4t0d4 0/3/0/0.0.4 C5447A 2052 no n/a c4t0d5 0/3/0/0.0.5 C5447A 10252 no n/a c5t1d0 0/6/0/0.1.0 C5447A 1024 yes yes c5t1d1 0/6/0/0.1.1 C5447A 2052 yes yes c5t1d2 0/6/0/0.1.2 C5447A 10252 yes yes c5t1d3 0/6/0/0.1.3 C5447A 1024 no n/a c5t1d4 0/6/0/0.1.4 C5447A 2052 no n/a c5t1d5 0/6/0/0.1.5 C5447A 10252 no n/a Note: All disk devices are listed here, not only hard disks.LVM mirroring software********************** LVM mirroring software MirrorDisk/UX (B2491A) is NOT installed................................................................................**********************Part 2: VOLUME GROUPS**********************Volume Group: /dev/vg00************* Physical Volumes: /dev/dsk/c1t2d0 Volume group disk space usage: Total : 8676 Mbytes 2169 PE Allocated: 8404 Mbytes 2101 PE Free : 272 Mbytes 68 PE PE size : 4 MbytesVolume Group: /dev/vg10************* Physical Volumes: /dev/dsk/c4t0d0 /dev/dsk/c5t1d0 Alternate Link Volume group disk space usage: Total : 1020 Mbytes 255 PE Allocated: 0 Mbytes 0 PE Free : 1020 Mbytes 255 PE PE size : 4 MbytesVolume Group: /dev/vg12************* Physical Volumes: /dev/dsk/c4t0d2 /dev/dsk/c5t1d2 Alternate Link Volume group disk space usage: Total : 10248 Mbytes 2562 PE Allocated: 10076 Mbytes 2519 PE Free : 172 Mbytes 43 PE PE size : 4 Mbytes 
+备注：其实用该收集工具就是在shell中执行不同的程序得到，如执行： 
+ioscan -fn; 
+mstm; 
+cstm; 
+sam; 
+等等。
+27、重新启动机器 
+#reboot 
+#shutdown 
+28、关闭机器 
+#shutdown -hy 0 
+#init 0
+28、unix的集中运行的模式 
+多用户模式，但用户模式等等6种。 
+用如下命令可以看看它的运行模式： 
+#who -r 
+29、普通的对话 
+#wall "hello!" (广播hello这个消息) 
+#banner "hello!"(放大hello这个消息) 
+#banner "hello!"|more (放大hello消息后再来广播它) 
+30、看当前的登录名 
+#logname 
+31、看所有登录用户 
+#whoiam 
+32、看登录用户在干什么 
+#whodo 
+33、看看进程 
+ps -ef|grep root (看root用户的进程，有时候console上执行的进程不能 
+够停止的话，那么就将console进程进程杀死，因为该进程是其它进程的 
+父进程。)
+34、webconsole的设置 
+HP Secure Web Console 的配置与维护 
+HP 的Secure Web Console 为系统管理员提供了一个基于Web的、更为 方便的接入Console的手段。系统管理员只需在任意一台能够ping通Web Console的PC上，启动网络浏览器，输入Web Console的IP，即可得到服务器Console的界面。 
+配置Web Console，应按以下步骤： 
+1)初始化Web Console： 
+1/将Web Console接入局网。其预设置的IP地址为192.0.0.192。 
+2/在您的PC上，运行以下命令： 
+route add 192.0.0.192 Local_IP_address 
+3/确保能够ping 192.0.0.192。 
+4/在PC上运行网络浏览器，输入URL：
+http://192.0.0.192
+，得到Web Console配置菜单。按菜单提示输入Admin Account 用户名和密码，将其IP改为本局网IP地址（确保IP不要重复）和子网掩码。 
+2)使用 Web Console 
+1/用普通Console的串口线，一端接服务器Local Console口，另一端接 Web Console 的串行口。 
+2/ 在PC的浏览器上，输入 Web Console当前的IP地址。即进入其LOGIN窗口，按要 求输入在配置时创立的Admin Account用户名和密码；则进入服务器Console界面， 用鼠标点击Access Console，黑色的Console窗口出现在屏幕右方；点击In/Out可放 大Console窗口。 
+35、demo进程的位置 
+/etc/rc3.d/中的文件在系统启动的时候便可以将进程拉起来。 
+36、磁带的使用 
+写： 
+tar cvf /dev/rmt/0m /temp/t.sql //将temp目录下面的t.sql文件备份到磁带0m中；
+读： 
+tar tvf /dev/rmt/0m //读出磁带0m中的内容； 
+从磁带上解开tar文件： 
+tar xvf /dev/rmt/0m/aa.tar ./ //将磁带上的aa.tar文件解开到当前目录下； 
+当用磁带来启动机器的时候，我们在启动的时候敲击任意键，就可以进入启动的路径， 
+再输入SEA(search)来搜寻启动的路径，然后就可以找到磁带的路径，如磁带路径为 
+5号路径，则输入bo 5,便可以从磁带启动了。
+37、HP-UX的安装 
+======================================================================== 
+HP－UX双机系统的安装
+1)在两台主机上分别安装好HP-UX操作系统，注意：在两台上的关于/， 
+/stand，/var，/home，/usr，/opt，/swap，/dev等等文件系统的大小必须保持一致； 
+2)安装patch(以下的操作在两台主机上是一样的操作) 
+#mkdir cdrom //创建一个DVD要挂接的目录 
+#ioscan -kfnCdisk //查看DVD的硬件描述文件，以便下面安装前的挂接
+_____________________使用标识为support plus的光盘____________________
+a)选择软件包中的标识为support plus的光盘插入DVD光驱中 
+#mount /dev/dsk/c3t2d0 /cdrom //将DVD文件系统挂接到/cdrom目录下 
+#cd /cdrom 
+#ls //浏览光盘，发现有XSWHWCR1100和 
+XSWGR1100两个patch目录 
+#swinstall -s /cdrom/XSWHWCR1100 //这样就进入了sam中进行安装，选择光盘 
+上的XSWHWCR1100，并且用sam中的菜 
+单项Action下的子菜单Install来进行安装 
+备注：安装完XSWHWCR1100这个patch之后，机器会自动reboot来重新创建新的内核 
+b)待机器再次启动之后，我们就可以安装同样的support plus这张光盘中的另外一个名 
+叫XSWGR1100的patch了。 
+#mount /dev/dsk/c3t2d0 /cdrom 
+#swinstall -s /cdrom/XSWGR1100 
+备注：安装完该patch之后同样系统自动重新启动 
+__________________使用标识为3 of 4 Application Software光盘_______________
+c)选择软件包中的标识为3 of 4 Application Software的光盘插入DVD光驱中 
+#mount /dev/dsk/c3t2d0 /cdrom 
+#swinstall -s /cdrom //进入sam后选择“Ignite -UX-11-00 B.2.5.136 
+HP-UX Installation Utilities for Installing 
+11.00 System 
+97186 HP-UX-B.11.00-32/4”这个patch来安装 
+备注：安装完该patch之后同样系统自动重新启动
+___________________使用标识为4 of 4 Application Software光盘____________ 
+d) 选择软件包中的标识为4 of 4 Application Software的光盘插入DVD光驱中 
+#mount /dev/dsk/c3t2d0 /cdrom 
+#swinstall -s /cdrom //进入sam后选择 揂.11.09 MC/ServiceGuard斦飧鰌atch来 
+安装MC/ServiceGuard 
+备注：安装完该patch之后同样系统也会自动重新启动 
+___________________使用标识为1 of 4 Application Software光盘____________ 
+e)选择软件包中的标识为1 of 4 Application Software的光盘插入DVD光驱中 
+#mount /dev/dsk/c3t2d0 /cdrom 
+#swinstall -s /cdrom //进入sam后选择 ?3230A B.11.00 100Base-T PCI? 和 
+揃.11.00 HP-UX Unlimited-User License斄礁鰌atch来安装。
+//其中前一个patch用于安装附加网卡的驱动程序，只有安装 
+了它，备用网卡和心跳网卡才在系统中可用，因为这两块 
+网卡是系统附加的，必须要安装配套的驱动程序，其中 
+53230A表示的是附加网卡的型号，这个可以从纸箱中的配 
+件单上获取，系统本身自带的那块主用网卡是在安装操作 
+系统的时候就已经自动被配置了，不用我们手工再配置了。 
+在未安装该patch之前，你用命令：#lanscan则只能 
+看到一块 
+主用网卡； 
+在安装完该patch之后，你再用命令：#lanscan则可以看到三 块网卡。 
+//其中后一个patch用于安装无限制的license。 
+======================================================================== 
+38、忘记了口令该怎么办 
+重新启动机器； 
+在启动的过程中按任意键，就会进入一个主菜单； 
+用SEArch来搜索启动的路径； 
+用bo + 路径的序列号来重起机器； 
+当出现Interactive with IPL (Y or N)?>时选择Y; 
+然后要求输入启动的内核的路径，hp_ux 0 (表示是启动到系统维护模式下面) 
+然后启动完成以后就可以进行passwd root来修改口令了。
+39、如何做一个root的文件系统的全备份 
+#make_recovery -Av
+40、光驱如何使用 
+#ioscan -funC disk 
+找到光盘的路径如/dev/dsk/c3t2d0 
+#mkdir /cdrom 
+#mount /dev/dsk/c3t2d0 /cdrom 
+#cd /cdrom 
+就可以了。 
+用完后将目录退出到根目录下面，再使用 
+umount /cdrom来释放光盘，便可以将光盘取出来。 
+如果想从光盘启动的话，那么就重新启动机器，并且敲击任意键便进入SEA，再用po来制定光盘的 
+路径用光盘启动。
+41、从光驱上安装informix的几种类型的压缩文件 
+1)tar xvf /cdrom/IDS.tar; (压缩文件是TAR类型的) 
+2) cpio -icvdBum   ontape -s -L 0 
+2)从备份的磁带来恢复另外一台机器的数据库 
+informix> ontape -p
+
+
+
+
+查看HP UNIX小型机的信息的命令集(二)
+51、HP的网卡激活、去激活命令 
+#ifconfig lan0 up //激活网卡lan0 
+#ifconfig lan0 down //去激活网卡lan0 
+备注：平时排除网卡的错误一般方法是：ping /ifconfig up|down /linkloop
+52、HP L2000（for scp）双机配置的详细注解 
+安装操作系统，确定主机名字，确定root的口令，确定/、/usr、/var等文件系统的大小，选择 
+主用网卡，并且给主用网卡赋予IP地址； 
+打CR补丁，打GR补丁； 
+安装另外两个附加网卡的驱动程序，此时用ifconfig可以看到三块网卡都up了； 
+用直连线将两台机器的主用网卡都连接到主用的HUB上去； 
+给其中一个附加网卡赋予IP地址，此Ip地址与主用网卡的Ip地址是两个网段中的地址，并且用交叉线 
+将主备机的这个附加网卡连接起来，作为心跳线； 
+另外剩余的一个网卡不用赋予IP地址，它是作为主用网卡和心跳网卡的备用网卡，它不用给IP地址， 
+它的替用关系在双机配置文件cmcluster.asc文件中有指定，当主用、心跳网卡损坏的时候，它就会 
+去替换他们，并且获取他们的Ip地址； 
+最后安装cmluster双机软件，该软件安装的时候用swinstall -s /cdrom来安装，但是安装之前必须 
+要数据codeword，只有输入正确的codeword之后，才会看到该软件包，而codeword的获取是要根据 
+随机发的纸件中获取，或到
+http://www.license.hp.com
+网站上获取，安装完后进入目录/usr/sbin下 
+检查有没有cmruncl/cmdeleteconf/cmapplyconf/cmhaltcl/cmrunnode/cmhaltnode等等文件； 
+创建锁盘逻辑卷组； 
+创建其它逻辑卷组、逻辑卷； 
+安装数据库； 
+安装tellin应用程序； 
+将双机配置文件拷贝到/etc/cmluster/目录下面进行配置、应用； 
+启动数据库； 
+启动应用； 
+启动双机；
+53、HP N4000（for sdp）双机配置的详细注解 
+安装完操作系统，如同hp l2000一样； 
+安装一系列的包，并且安装FC60软件包； 
+将FC60上的三个sc10磁盘柜子中的磁盘划分成物理卷组LUN，如LUN0/LUN1/LUN2/LUN3等； 
+在LUN上创建锁盘逻辑卷组、其它逻辑卷组，在第一台上创建，在vgimport到第二台机器； 
+在的一台上激活其它逻辑卷组； 
+安装数据库； 
+再停止数据库； 
+将逻辑卷组在的一台机器上去激活； 
+在第二台机器上激活逻辑卷组； 
+在第二台机器上安装数据库文件系统； 
+从第一台机器上拷贝onconfig、sqlhosts、.rhosts、services等等文件到第二台机器上； 
+在第二台机器上直接oninit启动数据库； 
+在/etc/cmcluster/目录下面配置双机配置文件； 
+在/etc/hosts中加入逻辑机对应的逻辑IP； 
+将数据库中的sqlhosts文件的机器名改为逻辑机的名字或者改为浮动IP地址； 
+将逻辑卷组都去激活； 
+启动双机； 
+切换双机检验是否切换正常；
+54、关于锁盘 
+1）锁盘的含义 
+锁盘是为双机系统出现某些特殊故障时确定主备用关系设置的， 
+因此每个节点在正常情况下都必须有权访问锁盘，因此也建议 
+用户不要将此盘为其它应用程序服务。为防止锁盘故障，锁盘 
+可配置多于一块，这时的要求同单块时一样，只是在配置文件 
+中需将所用锁盘都说明。在配置文件cmcluster.asc文件说明。
+2）锁盘的物理盘 
+锁盘的物理磁盘必须有两个scasi磁盘接口与两台主机都要连接才行的。 
+安装于共享磁盘柜中。 
+锁盘是双机系统所必须的，而且必须采用共享磁盘形式。 
+3）锁盘的逻辑卷组的创建 
+在TELLIN－SCP双机系统中，锁盘中不放置任何用户数据， 
+因此不需要进行逻辑卷的划分。若用户希望使用此盘空间， 
+可在不影响SCP双机正常工作的情况下根据自己的要求自行划分，双机对此没有附加要求。 
+在第一台机器上执行： 
+pvcreate /dev/rdsk/c0t2d0 
+vgcreate /dev/vglock /dev/dsk/c0t2d0 
+vgchange -a y /dev/vglock 
+vgdisplay //看看能不能够看到vglock这个磁盘卷组是激活的状态。 
+vgchange -a n /dev/vglock 
+vgdeport -m -s /tmp/vglock.map /dev/vglock //将vglock卷组的创建信息到处到一个map文件中 
+在第二台机器上执行： 
+rcp scp1:/tmp/vglock.map scp2:/tmp/vglock.map 
+mkdir /dev/vglock 
+mknod /dev/vglock/group c 64 0x010000 
+vgimport -m -m /tmp/vglock.map /dev/vglock 
+vgdisplay 
+vgchange -a y /dev/vglock
+4）锁盘在双机运行重的状态 
+锁盘在双机启动之前应该在两台机器上都是去激活的状态， 
+即便是双机启动了，锁盘同样是去激活的状态。
+55、关于双机cluster所使用的磁盘、以及应用package所使用的磁盘 
+cmclustar.asc所使用的磁盘的数量多余于package所使用的磁盘。
+56、FC60磁盘柜的维护命令集
+57、如何启动scp系统 
+启动备机数据库 
+oninit 
+启动北极数据库 
+oninit 
+启动主机应用 
+manager 
+启动北极应用 
+manager 
+在主机上启动双机 
+mcruncl 
+58、如何启动sdp系统 
+因为sdp一般都是采用共享磁盘柜的形式，所以只需要 
+将共享磁盘在一台机器上运行cluster就行了： 
+cmruncl 
+它就会将informix和sdp等所需的逻辑卷组都激活，并且 
+将文件系统都挂接上，然后就cluster启动起来。
+59、当数据库和cluster的主备不一致时，怎么恢复？ 
+1）主用数据库运行scp1上,而应用程序的主用运行第二台机器上， 
+这个时候只能将应用程序停止，然后将数据库都停止，将双机 
+也停止。 
+2）然后将双机的配置文件删除，用命令cmdeleteconf来删除。 
+然后再来生成配置文件，用命令cmapplyconf -C cmcluster.asc 
+-P ./scppkg/scppkg.asc；然后将刚才是主用的数据库启动起来 
+并且将它变为standard状态，再在该台机器上做一个数据库的0级 
+备份，然后将磁带拿到第二台机器上去恢复数据库，重新建立DR 
+关系之后，我们就可以将应用起来，然后将双机拉起来。 
+此时数据库和双机的应用应该都一致。 
+60、hp小型机器第一次安装完操作系统之后，必须要修改的参数。 
+比如数据库参数，不修改的话就无法初始化数据库。
+61、如何创建rootdg的系统备份（备份rootdg下面所有的东西） 
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 
+1)在一台好的机器上备份 
+#make_recovery -Av //备份的是vg00卷组下所有的东西，比如/ ,/stand , /var ,/swap 
+等等，备份放在了磁带上，下次若系统损坏了，可以用该磁 带来启动并恢复系统。 
+1)若用make_recovery 作备份的磁带来恢复的话，过程如下： 
+－－－－非交互式恢复系统 
+[1] 在磁带机中，插入系统恢复带 
+[2] Boot 系统 
+[3] 中断Boot 流程，进入 Boot_admin> 提示下 
+[4] Boot_admin> bo 8/16.0.0 
+8/16.0.0: 磁带机的 hardware path 
+[5] 选取 ?non-interactive ? 
+[6] 等待系统恢复完毕 
+－－－－－交互式恢复系统 
+[1] 在磁带机中，插入系统恢复带 
+[2] Boot 系统 
+[3] 中断Boot 流程，进入 Boot_admin> 提示下 
+[4] Boot_admin> bo 8/16.0.0 
+8/16.0.0: 磁带机的 hardware path 
+[5] 不选取 ?non-interactive ?[6] 选取 
+a. [ Install HP-UX ] 
+b. [ ] Advanced Installation 
+c. 配置或改变如下选项： 
+disks, file systems, 
+hostname, IP ddress, 
+timezone, root password, 
+DNS server, and gateway
+[7] 选取 [install continue?]，直到系统恢复完毕 
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 
+62、如何更改HP的console终端的终端类型 
+A、进入缺省配置状态下面 
+现在关闭console的电源 
+control + d 
+然后在左手不松动的情况下打开电源 
+知道出现了提示说“已经进入了缺省的设置”，就放开左手，然后再打回车便可以进入缺省模式下面； 
+B、进入configuration状态 
+先按住F8 
+再按住F10 
+然后用space空格键来进行选择修改，一般将终端类型选择为HP，但是也有时候选择vt100 
+修改之后按Esc退出键来进行保存退出，便可以了；
+63、console其它各个参数的修改 
+如果将我们诊断用户的故障电话进行分类，其中相当一部分的问题是出在Console的设置上。 
+通常的现象是Console上没有系统显示，或是键盘被锁住等。用户往往认为是主机的问题， 
+其实不然。下面我们简单介绍一下： 
+小型机控制台能正常运行的缺省配置是: 
+REMOTE MODE ON(带* 号) 
+MEMORY LOCK OFF(不带*号) 
+LINE MODIFY OFF(不带*号) 
+MODIFY ALL OFF(不带*号) 
+BLOCK MODE OFF(不带*号) 
+查看上述配置的方法，如下： 
+在小型机控制台的键盘上方有一排功能键F1－F8，在功能键F4与F5之间有Menu和User System两个键。 
+当要查看小型机控制台的参数配置时，首先按User System键， 这时在小型机控制台屏幕的最下面一 
+行显示出8个高亮度的方块，每个方块从左到右分别对应功能键F1到F8； 
+再按功能键F4，表示选择Modes，依然是8个亮方块，但是方块上的文字改变了。依照上述5个参数的 
+名称检查相应的方块，看是否正确地配置了。如果没有，按与方块对应的功能键进行改变，直到所有 
+参数正确地配置好。最后按Menu键退出。 
+此外，这里介绍一种快速解决Console故障的方法： 
+1）关闭Console电源 
+2）摁住CTL+D键，开Console电源，直到听到"笛"声，松开按键。 
+3）稍等片刻，在屏幕左下角将出现"Default configs used, Press enter clear"字样，按enter后一切恢复正常。 
+4）如果F4键位置的Remote Mode没有*号，摁F4加上* 
+以上做法实质上是为了恢复 Console缺省设置。
+64、忘记了HP的口令该怎么办？ 
+重启动机器到维护模式下面，更改后将模式再进入多用户模式就ok了： 
+1）重启，自检完成后，出现这一行“To discontinue , press any key in 10 seconds", 
+这个时候按任意，系统终止启动，进入Main Menu” 
+2）键入“bo”，在系统询问“Interact with IPL（Y/N？）？”时，输入“y”。 
+3）在提示符ISL>之后，输入"hpux - is ",系统进入单用户状态（即维护模式） 
+4)用passwd 更改口令 
+5）切换到多用户状态，用命令init 3,系统回复正常
+65、HP：磁盘管理软件LOGIC VOLUMN MANAGER ，简称LVM， 
+它的修改卷组的用户和读写权限是用hpux 中的chown 和chmod来实现的。 
+补充： 
+初始化物理磁盘：pvcreate -f /dev/rdsk/c1t1d0 
+创建卷组：mkdir /dev/vglock 
+mknod /dev/vglock/group c 64 0x0001 
+vgcreate /dev/vglock /dev/dsk/c1t1d0 
+查看卷组激活信息：vgdisplay /dev/vglock 
+激活卷组：vgchange -a -y /dev/vglock (用vgchange -c -y /dev/vglock来强制激活 ) 
+去激活卷组：vgchange -a n /dev/vglock (用vgchange -c n /dev/vglock来强制去激活) 
+创建逻辑卷：lvcreate -L 500 -n lv_root /dev/vglock (-L是指定大小，单位 M) 
+lvcreate -l 250 /dev/vglock (-l 是指页数，页单位4M) 
+创建文件系统：newfs -F hfs /dev/vglock/rlv_root 
+mkdir /informix 
+mount /dev/vglock/lv_root /informix 
+扩展逻辑卷：lvextend -l 50 /dev/vglock/lv_root (单位是页，页的大小再创建 
+卷组时已经确定，不可以再更改，一般缺省为4M，所以是200M。) 
+或者 
+lvextend -L 200 /dev/vglock/lv_informix (这是带大写的L参数，表示 
+是以M为单位来分配的大小的。) 
+扩展文件系统：umount /informix 
+extendfs /dev/vglock/lv_root 
+(如果是vxfs文件系统，则用 
+extendfs -F vxfs /dev/vg00/lvol4) 
+mount /dev/vglock/lv_root /informix 
+导出逻辑卷组：vgexport -p -v -m /tmp/lock.map /dev/vglock 
+(将vglock逻辑卷组的信息导出)
+删除逻辑卷组：vgexport -v -m /tmp/lock.map /dev/vglock （删除逻辑卷组vglock） 
+将该逻辑卷组导入导另外一套小型机上： 
+rcp scpn1:/tmp/lock.map scpn2:/tmp/lock.map 
+在节点scpn2中，创建锁盘卷组目录名（取和scpn1节点相同的目录名） 
+命令：# mkdir /dev/vglock 
+在scpn2节点上，为锁盘创建一控制文件名group 
+命令：# mknod /dev/vglock/group c 64 0x0001 
+最后一个参数oxhh0000应保证在scpn2节点中是唯一的，可能的话， 
+其参数设置和scpn1节点 相同。为保证唯一性，可以如下命令检查已存在的卷组： 
+在scpn2节点上，将锁盘配置从文件映射回系统 
+命令：# vgimport -s -m /tmp/lock.map /dev/vglock
+66、用 fbackup & frecover灵活的备份所有mounted文件系统或者指定某个文件系统， 
+也可以用来恢复整个文件系统，也可以灵活的恢复某个指定的文件系统，比make_recovery -Av 
+要灵活一些，而且这两个命令恢复只需要在单用户模式下，而make_recovery这个命令要 
+重新用磁带启动来恢复整个rootdg. 
+备注：与make_recovery的区别 
+make_recovery主要是备份rootdg的内容，用户恢复操作系统的； 
+fbackup & frecover主要是用来备份所有的逻辑卷组中所有的mounted文件系统文件； 
+A、系统备份命令： fbackup 
+1) fbackup的常用方式一： 
+[1] 进入单用户： 
+# init -s 或 
+# shutdown 0 
+[2] 系统全备份 
+# fbackup -f /dev/rmt/0m -0iv / -I /tmp/sysbk.index 
+-f : 设备文件名 ( such as DDS tape driver) 
+-i : 要包含的目录 
+-e: 不包含的目录 
+- I: 备份内容检索目录 
+- v: 备份内容详细列表 
+- 0 : 零级备份 
+# fbackup -f /dev/rmt/0m -i / -e /home 
+备份除了目录 /home的所有目录 
+[3] 说明 
+a、该命令方式对系统当前mounted的文件系统进行备份 
+b、备份级别说明 
+备份级别有0～9个级别，如果当前系统采用零级备份，当下一次采用5级备份时，系统仅将会对有变化的文件进行备份。 
+2) fbackup的常用方式二： 
+〖1〗 # mkdir -p /tmp/fbackupfiles/index 
+# mkdir -p /tmp/fbackupfiles/log 
+〖2〗 # touch/tmp/fbackupfiles/index/full.`date'+%y%m%d.%H:%M'` 
+〖3〗进入单用户 
+# shutdown -y 0 
+〖4〗对系统进行全备份 
+# fbackup -0vi / -f /dev/rmt/0m \ 
+-I /tmp/fbackupfiles/index/full.`date '+%y%m%d.%H:%M'` \ 
+2 > /tmp/fbackupfiles/log/ full.`date '+%y%m%d.%H:%M'` 
+〖5〗说明 
+通过该方式可以知道系统备份需要的时间 
+3) fbackup的常用方式三： 
+〖1〗进入单用户 
+# shutdown -y 0 
+〖2〗对系统进行全备份 
+# fbackup -0uv / -f /dev/rmt/0m \ 
+-g /tmp/fbackupfiles/mygraph \ 
+-I /tmp/fbackupfiles/index/full.`date '+%y%m%d.%H:%M'` \ 
+2 > /tmp/fbackupfiles/log/ full.`date '+%y%m%d.%H:%M'` 
+〖3〗说明 
+a、文件 mygraph: 包含需要备份的目录，格式如下： 
+/users/data 
+/home/app 
+e /oracle/sql 
+b、参数 u : 
+当备份系统成功时，系统将更新 /var/adm/fbackupfiles/dates. 
+4) fbackup的常用方式四： 
+备份远程系统 
+[1] 登录在本地系统时 
+# remsh backup_sysname " fbackup -f DDS_sysname: /dev/rmt/0m -0vi / " 
+[2] 登录在远程系统时 
+# fbackup -f backup_sysname: /dev/rmt/0m -0vi / 
+5) fbackup的常用方式五： 
+压缩方式备份( 不建议使用、影响系统性能) 
+[1] 压缩方式备份 
+# fbackup -0vi /dir -f - | compress | dd of=/dev/rmt/0m obs=10k 
+"－" : 指向标准输出 
+[2] 查看备份内容 
+# dd if=/dev/rmt/0m ibs=10k | uncompress | frecover -I - -f - 
+B、 系统恢复命令： frecover 
+1) 恢复磁带机上所有内容： 
+[1] 进入单用户: 
+# init -s or shutdown 0 
+[2] 恢复数据 
+# frecover -rf /dev/rmt/0m 
+恢复磁带上的所有数据 
+-f: 设备文件名 
+-r: 恢复磁带上的所有数据 
+-I: 将磁带上文件索引存到指定的文件中 
+# frecover -I /tmp/index.txt -f /dev/rmt/0m 
+2) 恢复某一目录： 
+# frecover -xi /directory 
+# frecover -x -i /dir1 -i /dir2 
+# frecover -xoi /dir 
+-o: 覆盖/dir下已有的、相同名称的文件 
+# frecover -xvXi /dir 
+-X: 按磁带上目录恢复数据 
+# cd /tmp/local; frecover -xvYi /dir 
+-Y: 按磁带上文件名恢复数据 
+例如： 
+# cd /tmp/local 
+# frecover -xvF -i /home/filename 
+[恢复结果] /tmp/local/filename 不是 /home/filename 
+3) 从远程磁带机上恢复数据到本地： 
+# frecover -xi /dir -f remote_name : /dev/rmt/0m 
+4) 从本地磁带机上恢复数据到远地系统： 
+# remsh remote_name "frecover -xi /dir -f local_name: 
+/dev/rmt/0m"
+67、修改HP双机系统启动特性 
+HP机及SUN机型通常采用下述两种办法：HP机型： 
+修改配置文件：/etc/rc.config.d/cmcluster将其设为如下内容： 
+AUTOSTART_CMCLD=1。 
+SCP 双机系统在主机启动时，不允许自动启动CLUSTER和其上的PKG，需要编辑 
+/etc/rc.config.d/cmcluster文件，使： 
+AUTOSTART_CMCLD=0
+68、HP双机配置时，节点访问权限的配置 
+访问权限设置 
+在进行CLUSTER和PKG配置之前，要配置或修改访问安全文件，使每个节点有访问另一个节点的权限。 
+权限设置如下： 
+以root用户权限编辑（或创建）位于/etc/cmcluster目录下的cmclnodelist文件，使其包含如下内容： 
+scp1 root 
+scp2 root 
+scp1 tellin 
+scp2 tellin 
+.rhosts 
+以root用户权限编辑根（/）目录下的.rhosts文件，使其包含如下内容： 
+scp1 root 
+scp2 root 
+scp1 tellin 
+scp2 tellin 
+hosts.equiv 
+添加如下内容： 
+scp1 root 
+scp2 root 
+scp1 tellin 
+scp2 tellin
+69、HP小型机中内存与cpu的关系 
+一个cpu一般最多配置0.5G的内存，两个cpu配置1G的内存。
+70、swapinfo查看交换区的使用情况，以及交换区的大小 
+scp1:/hptmp #swapinfo 
+Kb Kb Kb PCT START/ Kb 
+TYPE AVAIL USED FREE USED LIMIT RESERVE PRI NAME 
+dev 1048576 0 1048576 0% 0 - 1 /dev/vg00/lvol2 
+reserve - 792332 -792332 
+memory 781512 318032 463480 41%
+71、HP硬件收集工具的使用（适合于HP11。0版本和HP10。0版本） 
+信息收集工具Info_col.xx和LVMcollect.xx使用方法： 
+a． 在需要进行收集的主机上建立一个目录： 
+# mkdir /tmp/hpce 
+b． 将收集工具info_col.xx和LVMcollect.xx传到需要进行收集的主机上的/tmp/hpce目录下： 
+如果主机使用的OS是10.xx，则使用info_col.10和LVMcollect.10的脚本;如果主机使用的OS是11.xx， 
+则使用info_col.11和LVMcollect.11的脚本。 
+可以使用ftp的方式（使用asc方式传送）传到主机，也可以使用磁带tar到主机。 
+c． 修改info_col.xx和LVMcollect.xx的执行权限。 
+# chmod 744 info_col.xx 
+# chmod 744 LVMcollect.xx 
+d． 运行相应版本的info_col.xx进行信息收集工作。 
+对操作系统为10.xx的主机： 
+# cd /tmp/hpce 
+# sh ./info_col.10 
+对操作系统为11.xx的主机： 
+# cd /tmp/hpce 
+# sh ./info_col.11 
+e． 系统提示输入相应的信息 
+输入操作者姓名 
+输入操作者员工号（可输入6个0） 
+输入产品型号（在主机贴的标签上可以找到--"机器型号项"） 
+输入产品序列号（在主机贴的标签上可以找到--"序列号项"） 
+（注意：序列号一定要输入准确，请仔细核对） 
+确认输入的内容（选择"y"，系统开始自动进行信息收集） 
+f． 等待自动收集程序运行结束，系统会在收集脚本执行的目录下（ 
+通常为/tmp/hpce目录）生成一个ascii文件，文件名为".txt"，此文件就是最后收集到的信 
+息文件。将此文件保存并传回即完成信息收集工作。
+(备注：其实shell程序中使用的都是一系列的命令，如：ioscan -fn;mstm；sam等)
+72、umask如何设置 
+当最初登录到系统中时， u m a s k命令确定了你创建文件的缺省模式。这一命令实际上和 
+c h m o d命令正好相反。你的系统管理员必须要为你设置一个合理的u m a s k值，以确保你创建的 
+文件具有所希望的缺省权限，防止其他非同组用户对你的文件具有写权限。 
+在已经登录之后，可以按照个人的偏好使用u m a s k命令来改变文件创建的缺省权限。相应 
+的改变直到退出该s h e l l或使用另外的u m a s k命令之前一直有效。 
+一般来说，u m a s k命令是在/ e t c / p r o f i l e文件中设置的，每个用户在登录时都会引用这个文 
+件，所以如果希望改变所有用户的u m a s k，可以在该文件中加入相应的条目。如果希望永久性 
+地设置自己的u m a s k值，那么就把它放在自己$ H O M E目录下的. p r o f i l e或. b a s h _ p r o f i l e文件中。 
+如何计算umask值 
+u m a s k命令允许你设定文件创建时的缺省模式，对应每一类用户(文件属主、同组用户、 
+其他用户)存在一个相应的u m a s k值中的数字。对于文件来说，这一数字的最大值分别是6。系 
+统不允许你在创建一个文本文件时就赋予它执行权限，必须在创建后用c h m o d命令增加这一 
+权限。目录则允许设置执行权限，这样针对目录来说， u m a s k中各个数字最大可以到7。 
+该命令的一般形式为： 
+umask nnn 
+其中n n n为u m a s k置0 0 0 - 7 7 7。 
+让我们来看一些例子。 
+计算出你的u m a s k值： 
+可以有几种计算u m a s k值的方法，通过设置u m a s k值，可以为新创建的文件和目录设置缺 
+省权限。表1 - 8列出了与权限位相对应的u m a s k值。 
+在计算u m a s k值时，可以针对各类用户分别在这张表中按照所需要的文件/目录创建缺省 
+权限查找对应的u m a s k值。 
+例如，u m a s k值002 所对应的文件和目录创建缺省权限分别为6 6 4和7 7 5。 
+还有另外一种计算u m a s k值的方法。我们只要记住u m a s k是从权限中“拿走”相应的位即 
+下载 
+表1-8 umask值与权限 
+u m a s k 文件目录 
+0 6 7 
+1 6 6 
+2 4 5 
+3 4 4 
+4 2 3 
+5 2 2 
+6 0 1 
+7 0 0 
+例如，对于u m a s k值0 0 2，相应的文件和目录缺省创建权限是什么呢？ 
+第一步，我们首先写下具有全部权限的模式，即7 7 7 (所有用户都具有读、写和执行权限)。 
+第二步，在下面一行按照u m a s k值写下相应的位，在本例中是0 0 2。 
+第三步，在接下来的一行中记下上面两行中没有匹配的位。这就是目录的缺省创建权限。 
+稍加练习就能够记住这种方法。 
+第四步，对于文件来说，在创建时不能具有执行权限，只要拿掉相应的执行权限比特即 
+可。 
+这就是上面的例子，其中u m a s k值为0 0 2： 
+1) 文件的最****限rwx rwx rwx (777) 
+2) umask值为0 0 2 - - - - - - -w- 
+3) 目录权限rwx rwx r-x (775) 这就是目录创建缺省权限 
+4) 文件权限rw- rw- r-- (664) 这就是文件创建缺省权限 
+下面是另外一个例子，假设这次u m a s k值为0 2 2： 
+1) 文件的最****限rwx rwx rwx (777) 
+2 ) u m a s k值为0 2 2 - - - -w- -w- 
+3) 目录权限rwx r-x r-x (755) 这就是目录创建缺省权限 
+4) 文件权限rw- r-- r-- (644) 这就是文件创建缺省权限 
+常用的umask值 
+表1 - 9列出了一些u m a s k值及它们所对应的目录和文件权限。 
+表1-9 常用的u m a s k值及对应的文件和目录权限 
+u m a s k值目录文件 
+022 755 644 
+027 750 640 
+002 775 664 
+006 771 660 
+007 770 660 
+如果想知道当前的umask 值，可以使用u m a s k命令： 
+第1章文件安全与权限11 
+下载 
+如果想要改变u m a s k值，只要使用u m a s k命令设置一个新的值即可： 
+$ umask 002 
+确认一下系统是否已经接受了新的u m a s k值： 
+在使用u m a s k命令之前一定要弄清楚到底希望具有什么样的文件/目录创建缺省权限。否 
+则可能会得到一些非常奇怪的结果；例如，如果将u m a s k值设置为6 0 0，那么所创建的文件/目 
+录的缺省权限就是0 6 6！ 
+举例子：如何指定一个用户的umask值？ 
+73、xargs 
+在使用f i n d命令的- e x e c选项处理匹配到的文件时， f i n d命令将所有匹配到的文件一起传递 
+给e x e c执行。不幸的是，有些系统对能够传递给e x e c的命令长度有限制，这样在f i n d命令运行 
+几分钟之后，就会出现溢出错误。错误信息通常是“参数列太长”或“参数列溢出”。这就是 
+x a rg s命令的用处所在，特别是与f i n d命令一起使用。F i n d命令把匹配到的文件传递给x a rg s命 
+令，而x a rg s命令每次只获取一部分文件而不是全部，不像- e x e c选项那样。这样它可以先处理 
+最先获取的一部分文件，然后是下一批，并如此继续下去。在有些系统中，使用- e x e c选项会 
+为处理每一个匹配到的文件而发起一个相应的进程，并非将匹配到的文件全部作为参数一次 
+执行；这样在有些情况下就会出现进程过多，系统性能下降的问题，因而效率不高；而使用 
+x a rg s命令则只有一个进程。另外，在使用x a rg s命令时，究竟是一次获取所有的参数，还是分 
+批取得参数，以及每一次获取参数的数目都会根据该命令的选项及系统内核中相应的可调参 
+数来确定。 
+让我们来看看x a rg s命令是如何同f i n d命令一起使用的，并给出一些例子。 
+下面的例子查找系统中的每一个普通文件，然后使用x a rg s命令来测试它们分别属于哪类 
+文件： 
+下面的例子在整个系统中查找内存信息转储文件(core dump) ，然后把结果保存到 
+/tmp/core.log 文件中： 
+$ find . -name "core" -print | xargs echo "" >/tmp/core.log 
+下面的例子在/ a p p s / a u d i t目录下查找所有用户具有读、写和执行权限的文件，并收回相应 
+的写权限： 
+$ find /apps/audit -perm -7 -print | xargs chmod o-w 
+在下面的例子中，我们用g r e p命令在所有的普通文件中搜索d e v i c e这个词： 
+$ find / -type f -print | xargs grep "device" 
+在下面的例子中，我们用g r e p命令在当前目录下的所有普通文件中搜索D B O这个词： 
+$ find . -name \ ＊-type f -print | xargs grep "DBO" 
+注意，在上面的例子中， \用来取消f i n d命令中的*在s h e l l中的特殊含义。 
+74、Top -s 300 -f top.txt 
+为了防止有时候top不能查看到所有的进程,最好是等5分钟,并且将结果文件保存到文件中,这样再从文件中来 
+查看结果. 
+=====================
+一、基本命令
+1) tail 和 head
+使用tail命令可以查看文件的尾部，head命令则查看文件的头部。
+# tail filename
+# tail -f filename； 使tail不断执行，当文件被写入时显示文件的新行。
+#head filename
+2) date 和 cal
+cal命令显示日历。
+# cal 2000
+# cal 1 2000
+3) find
+find命令是功能最强的命令之一，但同时也是命令行结构最难以掌握的命令之一。
+# find / -print | wc -l 显示系统中所有文件和目录的数目。
+# find / -user $LOGNAME -print 显示系统中该用户所有文件和目录。
+# find / -size 100 -print 显示文件大小为100 blocks。
+# find / -size -100 -print 显示文件大小小于100 blocks 。
+# find / -size +100 -print 显示文件大小大于100 blocks 。
+# find / -name core -exec rm {} ；查找并删除core文件。
+# find . -exec chown $LOGNAME {} ； 修改一个目录下的所有文件的用户所属。
+# find .-type d -exec chmod 770 {} ；修改一个目录下的所有目录的权限。
+4) stty
+该命令用于检查和修改用户当前注册终端的通信参数。
+# stty -a；查看当前注册终端的通信参数。
+# stty -ixon；设置ixon为off。
+#stty ixon；设置ixon为on。
+# stty sane；当终端发生混乱时，通常可以产生有益的效果。
+5) tset
+用于设置终端类型。
+tset -s -Q -m :?hp
+6) cron
+cron(chronography，计时)，每分钟苏醒一次，查看控制文件以确定当时是否存在应运行的作业，存在则运行之。
+# crontab filename ; 创建一个 cron
+# crontab -r ; 把cron从crontab去掉
+crontab位于目录/var/spool/cron/crontabs下，每个用户的cron文件名是其用户名。
+7) ioscan
+#ioscan -fn （用这个命令，我们可以看到所有的设备及其设备文件等信息。）
+例如：查看CD-ROM的设备文件
+#ioscan -fnCdisk
+Class I H/W Path Driver S/W State H/W Type Description
+===================================================================
+disk 6 4.8.0 sdisk CLAIMED DEVICE SEAGATE ST34371W
+/dev/dsk/c0t8d0 /dev/rdsk/c0t8d0
+disk 7 4.11.0 sdisk CLAIMED DEVICE SEAGATE ST34371W
+/dev/dsk/c0t11d0 /dev/rdsk/c0t11d0
+disk 5 16/5.2.0 sdisk CLAIMED DEVICE TOSHIBA CD-ROM XM-5401TA
+/dev/dsk/c3t2d0 /dev/rdsk/c3t2d0
+其中描述为" TOSHIBA CD-ROM XM-5401TA"的设备
+就是CD-ROM，设备文件为/dev/dsk/c3t2d0。
+8) bdf
+该命令用于检查文件系统的使用情况。
+#bdf
+Filesystem kbytes used avail %used Mounted on
+/dev/vg00/lvol1 67733 35561 25398 58% /
+/dev/vg01/lvol1 20480 11675 8247 59% /home
+各列的含义：
+Filesystem:文件系统名
+kbytes:字节数，以k为单位
+used:已使用空间
+avail:尚可使用空间
+%used: 已使用空间占本文件系统全部空间比率。
+Mounted on: 安装目录
+注： ％used达到90%以上时，应考虑做必要的文件清理工作
+9) lanscan
+    用 lanscan 命令查看主机中的网卡。例如：
+# lanscan
+Hardware Station Crd Hdw Net-Interface NM MAC HP-DLPI DLPI 
+Path Address In# State NamePPA ID Type Support Mjr#
+10/4/8 0x00108318E6E8 0 UP lan0 snap0 1 ETHER Yes 119
+10/12/6 0x0060B0C44462 1 UP lan1 snap1 2 ETHER Yes 119
+上述命令显示主机中有3块网卡，它们的有关参数如下：
+硬件地址分别是 10/4/8、10/4/12(Hardware Path)
+网卡名是 lan0、lan1(Net-Interface Name列)
+各网卡的NMID是 1、2(NMID列)
+各网卡的工作状态是 UP、DOWN、UP (Hdw state列)
+各网卡的MAC地址是Station Address所对应的列。
+一个网卡要能够正常工作，首先它的工作状态（Net-Interface name）必须是UP。
+用 ifconfig 命令查看网卡对应的IP地址。例如：
+# ifconfig lan0
+lan0: flags=863
+inet 15.85.114.14 netmask fffff800 broadcast 15.85.119.255
+在网卡lan0上的地址是15.85.114.14(inet)，子网掩码ffff800，广播地址15.85.119.255
+10) ifconfig
+# ifconfig lan0
+lan0: flags=863
+inet 15.85.114.14 netmask fffff800 broadcast 15.85.119.255
+在网卡lan0上的地址是15.85.114.14(inet)，子网掩码ffff800，广播地址
+15.85.119.255
+11) 更改主机IP地址    
+1. 首先使用"lanscan"和"ifconfig"命令查出该网卡的设备名
+2. 使用vi命令编辑/etc/rc.config.d/netconf文件。找到
+INTERFACE_NAME[0]=lan1
+IP_ADDRESS[0]=""
+SUBNET_MASK[0]=""
+BROADCAST_ADDRESS[0]=""
+将原有的IP地址和SUBNET_MASK改成新值
+3. 使用vi 命令编辑/etc/hosts文件，改变对应主机名的IP地址
+4. 注意：不要在CDE环境中，直接改变IP地址，应退出CDE环境，完成修改过程。
+二、常用配置文件
+1．/etc/hosts 
+主机名字解析文件，提供主机名和IP地址的对应。
+2．/etc/passwd
+口令文件，内容为：
+登录用户名：加密口令：用户ID：组ID：保留：初始工作目录：shell路径
+3． /etc/group
+内容为：
+组名：加密密码：组ID：所有属于该组的用户。
+4． /etc/profile
+如果该文件存在，则每个用户登录时将执行该文件。该文件一般用于设置一些通用环境变量，如果用户的home目录中存在.profile文件，则在执行/etc/profile之后，再执行用户的.profile文件。
+5． /etc/inittab
+内 部初始化之后，系统将启动/etc/init这个deamon进程，使/etc/init进程取得引导序列的控制权。而init进程从文件/etc /inittab(init table，初始化表)取得指示，该文件 的内容控制所有init状态，同时也控制那些已消亡进程的再生。
+6． /etc/fstab
+系统中可以mount的文件系统的信息。
+7． /etc/lvmtab
+使用命令：
+# strings /etc/lvmtab；查看系统VG和磁盘信息。
+8． /etc/rc.config.d/netconf
+包含系统名称和网络配置信息，如IP地址、子网掩码和路由信息等。
+9． /stand/system
+包含系统的驱动程序和子系统信息，内核设备信息和一些系统可调参数信息。
+===============================
+1、 cd命令的使用 
+返回上一次的目录（cd -） 
+2、 Esc键的使用 
+在命令行中可通过击两次Esc键来匹配当前目录中唯一的文件名，这样可节约击入长文件名的时间 
+3、 col命令的使用 
+man cp | col –b >cp.txt 
+该命令可将cp命令的联机帮助手册输出为名为cp.txt的文本文件 
+4、启动机器时执行的工作脚本（/etc/rc.config.d/） 
+5、which命令的使用（查看某命令的绝对路径） 
+which 命令名 
+6、显示当前系统补丁安装情况（show_patches） 
+7、中文环境的配置 
+a、 查看系统中安装的语言集（locale –a） 
+b、 显示当前语言环境变量（echo $LANG） 
+c、 如不为中文则修改（export LANG=zh_CN.hp15CN） 
+d、 sty –istrip 
+8、查看系统信息和运行情况 
+a、 glance 
+b、 top 
+c、 performance view 
+d、 /opt/ignite/bin/print_manifest 
+/var/opt/ignite/local/manifest/manifest 
+e、 /var/adm/syslog/syslog（系统运行日志） 
+f、 /var/adm/shutdownlog 
+g、 /var/adm/crash/ 
+h、 /var/opt/sna/sna.err 
+i、 /var/adm/nettl.LOG000 
+/usr/sbin/netfmt /var/adm/nettl.LOG000 >net.log 
+j、/usr/contrib./bin/info_col.11 
+k、/var/adm/btmp（历史登录信息，可用last命令查看） 
+l、/var/adm/wtmp（比btmp更详细的信息） 
+m、/etc/rc.log（机器启动时的信息） 
+n、/var/adm/sw/（有关软件包安装、删除的信息） 
+9、查看系统当前init级别（who –r） 
+10、显示系统不成功登录的历史纪录（lastb –R） 
+11、ftp问题（如无法用某一用户进行ftp） 
+a、 将/etc/passwd中该用户的sh路径改为/usr/bin/ksh 
+b、 在/etc/shells文件中将ksh的路径加入 
+12、在HP11i环境下两台主机rlogin、rcp和ftp速率小于10mbps 
+a、 安装补丁（PHKL_25233、25389，PHNE_26728、27063） 
+13、在HP11i环境下主机与路由器之间无法用大包进行ping命令 
+a、 在主机的/etc/rc.config.d/nddconf文件中增加ip_send_source_quench参数的配置 
+b、 ndd –c 
+14、网络配置（含网卡地址、激活状态、路由地址）可通过修改/etc/rc.config.d/netconf文件来实现。 
+15、swapinfo命令的使用 
+swapinfo –mt 
+16、what命令的使用（假如要查看某一core文件的诱因） 
+what core 
+17、控制某一特定地址通过telnet、ftp和login协议访问主机的方法 
+/var/adm/inetd.sec 
+18、tsm的使用 
+在tsm状态下可通过ctrl+w来切换屏幕。 
+19、finger命令的使用 
+finger –R（查看当前登录到主机的客户机信息） 
+20、parstaus命令的使用 
+parstatus –p 查看某一特定分区的信息。 
+　 
+[next]
+扩充文件系统的方法
+一、 vg00（例如将/home扩充至2G，逻辑卷名为/dev/vg00/lvol8） 
+1、 shutdown –y 0 进入单用户模式 
+2、 umount /home 
+3、 lvextend –L 2000 /dev/vg00/lvol8 
+4、 extendfs /dev/vg00/rlvol8 
+5、 mount /dev/vg00/lvol8 /home 
+6、 reboot 
+二、 vg不在MC的情况 
+除不要启停机器外同上 
+三、 vg在MC中配置的情况 
+1、 有应用运行在该逻辑卷上，且不便停应用的情况（例如将/data扩充至6G，逻辑卷名为/dev/vgdata/lvdata，MC环境为node1和node2，应用包名为pkg，缺省运行在node2上） 
+a、 cmhaltpkg –v pkg 
+b、 vgchange –c n /dev/vgdata 
+c、 vgchange –a y /dev/vgdata 
+d、 lvextend –L 6000 /dev/vgdata/lvdata（扩大到6G） 
+e、 extendfs /dev/vgdata/rlvdata（如为裸设备，e-n可不做。） 
+f、 vgexport –p –v –s –m /tmp/vgmap/vgdata.map /dev/vgdata 
+g、 rcp /tmp/vgmap/vgdata.map node1: /tmp/vgmap/vgdata.map 
+h、 rlogin node1 
+i、 ll /dev/vgdata（查看node1上vgdata的设备编号，假设为0x0c0000） 
+j、 vgexport /dev/vgdata 
+k、 mkdir /dev/vgdata 
+l、 mknod /dev/vgdata/group c 64 0x0c0000 
+m、 vgimport –s –v –m /tmp/vgmap/vgdata.map /dev/vgdata 
+n、 exit 
+o、 vgchange –a n /dev/vgdata 
+p、 vgchange –c y /dev/vgdata 
+q、 cmmodpkg –e pkg 
+2、 无应用运行在该逻辑卷上，或可暂停应用的情况（例如将/data扩充至6G，逻辑卷名为/dev/vgdata/lvdata，MC环境为node1和node2，应用包名为pkg，缺省运行在node2上） 
+1、将前一种情况中的a-c改为（将涉及到该逻辑卷的应用停止，该工作应选择合适时机执行）： 
+a、将涉及到该逻辑卷的应用停止。 
+b、umount /data 
+2、执行前一种情况中的d-n 
+3、 将前一种情况中的o-q改为 
+a、 mount /data 
+b、 激活涉及到该逻辑卷的应用
+注：如未在VG中新增PV则可将上述步骤中的f-n略去。
+一。 
+Unix安装后創建文件系統前的準備 
+*注：因为我的机器只有一个磁盘，所以，此步中除创建逻辑卷外大部分操作可以省略。 
+①建物理卷。 
+找出与磁盘相关的设备文件：ioscan(命令)：ioscan –funC disk。 
+找到disk对应的设备文件名：c1t15d0 
+因只有一个磁盘，所以只能创建一个物理卷。 
+在创建前，通过mediainit对磁盘格式化合校验完整性： 
+#mediainit /dev/rdsk/c1t15d0 
+l创建物理卷： 
+#pvcreate /dev/rdsk/c1t15d0 
+注：如果此时该磁盘以输入某卷组的一部分，而且确信要创建物理卷。在命令行加“-f”来强制执行。 
+②创建卷组。(仅供理解用，本系统不需要) 
+1.用卷组名在/dev下创建一目录。 
+如果卷组名为vg01,则目录为：/dev/vg01。 
+#mkdir /dev/vg01. 
+在此目录下为该卷组创建一组设备文件。 
+#mknod /dev/vg01/group c 64 0x010000 
+创建卷组（以物理卷为参数）： 
+#vgcreate /dev/vg01 /dev/dsk/c1t15d0. 
+建完后，可以用命令：vgdisplay来检查设置是否正确。 
+③创建逻辑卷。 
+创建逻辑卷时，相应的字符设备和块设备会在卷组目录下生成。 
+现在，我们在默认卷组vg00中创建以下逻辑卷： 
+一个256MB,名为lvoltuxlog的逻辑卷。 
+#lvcreate -L 256 -n lvoltuxlog。 
+参数：-L 以MB为单位表示逻辑卷的大小。 
+-n 指定逻辑卷名称，缺省为：lvol1,lvol2…..。 
+二、創建文件系統。 
+注： 系统安装完成后，会自动创建一些文件系统和目录。所以，对一般权限的用户来讲，可以在/home目录下安装软件。但是，如果软件过多，会造成比较混乱和不 利于管理。最合适的做法，高权限的用户自己可以建立一些文件系统，这些文件系统在单独的目录下。这样对将来（逻辑卷）的扩展和维护非常有利。 
+（1）文件系统介绍： 
+1。高性能文件系统（HFS），现在应用的不多了，只在存储HP-UX内核时使用。 
+2。日志文件系统（JFS），现在应用最多。 
+3。网络文件系统（NFS）。 
+4。 CD-ROM文件系统（CDFS）用于CD-ROM上存储文件。 
+（2）创建新的文件系统： 
+文件系统必须建在逻辑卷上。 
+1．newfs创建文件系统： 
+我们在 /dev/vg00/lvoldb01上创建JFS文件系统，如下命令： 
+#newfs –F vxfs /dev/vg00/ lvoltuxlog。 
+2．挂载文件系统。 
+mount实现挂载： 
+把/dev/vg00/ lvoltuxlog挂载到/tuxedo/LOG目录上。（事先创建此目录，具体见下面的*注解1） 
+#mount -F vxfs /dev/vg00/ lvoltuxlog /tuxedo/LOG。 
+现在可用bdf显示所有挂起的卷。 
+*注解1：在根目录下建立目录/tuxedo/LOG：#mkdir tuxedo/LOG。 （3）扩展卷组：（如果将来磁盘空间不够，可以对卷组扩展） 
+添加一块磁盘，用pvcreate创建一物理卷，然后，将其用vgextend加入卷组中。 
+如：把磁盘c0t3d0加入卷组vg00中： 
+#pvcreate /dev/rdsk/c0t3d0 
+#vgextend vg00 /dev/dsk/c0t3d0 
+用#vgdisplay -v vg00 看是否扩展成功。 
+（4）扩展逻辑卷。 
+扩展了卷组以后，可以通过lvextend命令扩展逻辑卷尺寸。 
+如把/dev/vg00/ lvoltuxlog扩展到800M。（以前为256M）。 
+#lvextend -L 800 /dev/vg00/ lvoltuxlog 
+要在某特定磁盘上扩展逻辑卷，可把磁盘设备文件作为参数添加到lvextend命令的后面。 
+#lvextend -L 800 /dev/vg00/ lvoltuxlog /dev/dsk/c0t3d0 
+(5)扩展文件系统。 
+扩展了逻辑空间不能自动扩展文件系统空间。在/dev/vg00/ lvoltuxlog下扩展JFS文件系统。 
+1．先卸载#umount /tuxedo/LOG。 
+2．#Extendsf -F vxfs /dev/vg00/ lvoltuxlog。 
+3．挂载#mount -F vxfs /dev/vg00/ lvoltuxlog /tuxedo/LOG。 
+完成上述操作后，可通过bdf命令查看是否分配成功。
+===================================
+操作命令 
+1-1.处理目录 
+pwd： 显示当前工作目录&& 
+cd directory_path： 更改目录&& 
+cd： 更改为主目录&& 
+mkdir directory_name： 创建目录&& 
+rmdir directory_name： 删除空目录&&　 
+1-2.处理文件 
+elm： 阅读邮件&& 
+ls： 列举当前目录下的文件和目录&& 
+ls -a： 列举所有文件或目录包括隐藏点文件& 
+lsf： 列举文件并用/ 标记目录名& 
+compress filename： 压缩文件 
+uncompress filename： 解压缩文件 
+vi file_name： 创建或编辑文件 
+more file_name： 显示文件内容 (按q 退出) 
+head file_name： 显示文件的前10 行 
+tail file_name： 显示文件的后10 行 
+cp file_name file_copy： 复制文件 
+mv old_file new_file： 将文件重命名为新文件名 
+cat file1 >> file2： 将file1 附加到file2 的结尾处 
+rm file： 删除file& 
+rm -rf dir_name： 删除目录dir_name 及其所有文件 
+spell file_name： 在文件中检查拼写 
+1-3.打印 
+lp file_name： 打印文件 
+lpstat -t： 确定打印机的状态 
+cancel request_id： 取消打印请求 
+1-4.查找和组织 
+find .-name 'x*'： 在当前目录和子目录中查找以x 开头的文件 
+grep word *： 在当前目录下的所有文件中查找word 一词的所有匹配 
+sort listfile： 按字母顺序对listfile 进行排序 
+date： 显示日期和时间 
+alias： 列举所有命令的别名 
+man command_name： 查找HP-UX 命令信息 
+echo $PATH： 确定PATH 设置 
+echo $SHELL： 确定所用的shell　 
+1-5.安全操作 
+passwd： 创建或更改口令 
+ll file_name： 显示文件的权限 
+ll -d directory_name： 显示目录的权限 
+chmod class=permissions name： 更改文件或目录权限 
+chown user name： 更改文件或目录的所有权 
+1-6.系统操作 
+clear： 清除屏幕 
+set -o editor_name： 设置命令行编辑器 
+TERM=term_type： 设置终端类型（从/usr/lib/terminfo 中选择term_type）& 
+ps -ef： 列举当前进程状态和PID& 
+kill PID： 终止进程 
+passwd： 创建或更改口令
+
+ 
+
+Best Regards 
+
+-----------------------------------------------------
+
+Frank, Wu(武洪)
+
+安图特（北京）科技有限公司 
+
+Auto Tech(Beijing)Technology Co.,Ltd.
+Mobile:13910539954
+
+Fax:86-10-66214049
+E-mail:frank.wu@atitech.com.cn
+
+ 

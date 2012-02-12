@@ -1,0 +1,97 @@
+#####################
+1. 开启secure crt日志记录功能
+
+#####################
+2. 进到root或相应用户
+# ps -ef | grep smon | grep -v grep
+
+# su - [第一列返回的用户名]
+
+例如返回的是oracle
+# su - oracle
+
+#####################
+3. 进入到sqlplus 
+
+$ sqlplus / as sysdba
+
+#####################
+4. 跑脚本ora_pm_v0.4.sql，复制文件内容到SQL> 命令行执行
+
+#####################
+5. 取一个awr报告
+SQL> @?/rdbms/admin/awrrpt
+
+
+
+==> 
+...
+Defaults to 'html'
+Enter value for report_type: ==> 直接敲回车
+
+==> 
+...
+Enter value for num_days: ==> 输入1，敲回车
+
+==>
+...
+                                724 27 Dec 2011 16:00      1
+                                725 27 Dec 2011 17:00      1
+                                726 27 Dec 2011 17:59      1
+                                727 27 Dec 2011 19:00      1
+                                728 27 Dec 2011 19:59      1
+
+
+Specify the Begin and End Snapshot Ids
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Enter value for begin_snap: 输入一个起始snap id,例如：727
+
+
+==> 
+...
+Specify the Begin and End Snapshot Ids
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Enter value for begin_snap: 727    
+Begin Snapshot Id specified: 727
+
+Enter value for end_snap: 输入一个结束的snap id,例如: 728
+
+
+==> 
+...
+Specify the Report Name
+~~~~~~~~~~~~~~~~~~~~~~~
+The default report file name is awrrpt_1_727_728.html.  To use this name,
+press <return> to continue, otherwise enter an alternative.
+
+Enter value for report_name: ==> 这里直接敲回车，会给你再当前目录生成一个报告"awrrpt_1_727_728.html"
+
+
+==>
+...
+</BODY></HTML>
+Report written to awrrpt_1_727_728.html
+SQL> 
+
+看到这句话表明报告生成完毕! 通过ftp或者secure crt另外单独记录也可以。
+
+
+#####################
+6. 查看bdump路径
+
+SQL> show parameter dump
+
+==》 查看background_dump_dest，注意可能会有折行
+路径名以bdump结尾。。。
+
+SQL> exit ==》 推出sqlplus命令行
+
+$ cd <找到的以bdump> 结尾的路径
+
+$ ls -l a*.log
+把返回到的日志文件抓下或ftp获取下。。。
+
+
+
+#####################
+
