@@ -334,7 +334,7 @@ FROM   dba_tablespaces;
 
 col group# for 999999;
 col member# for 999;
-col "log file path" for a30;
+col "log file path" for a35;
 col "MB" for 99999;
 SELECT l.group#,
        l.members           AS "member#",
@@ -376,6 +376,9 @@ FROM   v$controlfile;
 -- Check if there is invalid objects
 ---- Affirm the status of the objects
 
+col owner for a20;
+col object_name for a30;
+col object_type for a15;
 SELECT OWNER,
        OBJECT_NAME,
        OBJECT_TYPE
@@ -386,6 +389,11 @@ WHERE  STATUS = 'INVALID';
 -- Check if there is unusable indexes
 ---- Affirm the use of the indexes
 
+col owner for a20;
+col index_name for a20;
+col index_type for a15;
+col table_name for a20;
+col status for a10;
 SELECT OWNER,
        INDEX_NAME,
        INDEX_TYPE,
@@ -423,15 +431,18 @@ SELECT   /*+ rule */
                WHERE t.owner = i.table_owner
                      AND t.segment_name = i.table_name)
     AND t.segment_type IN ('TABLE', 'TABLE PARTITION')
-    AND t.owner NOT IN ('SYS', 'SYSTEM', 'SCOTT', 'OUTLN', 'SCOTT', 'TSMSYS', 'DIP', 'DBSNMP')
+    AND t.owner NOT IN('SYS', 'SYSTEM', 'SYSMAN', 'DMSYS', 'EXFSYS','MDSYS', 'OLAPSYS', 'ORDSYS', 'TSMSYS', 'WMSYS', 'OUTLN', 'WMSYS', 'SCOTT' );
 ORDER BY 5 DESC;
 
 
 -- Check if there have disabled constraints
 ---- Enable the disabled constraints
 
-set linesize 100;
+set linesize 120;
 col owner for a20;
+col CONSTRAINT_NAME for a30;
+col CONSTRAINT_TYPE for a15;
+col TABLE_NAME for a20;
 SELECT OWNER,
        CONSTRAINT_NAME,
        CONSTRAINT_TYPE,
@@ -444,6 +455,8 @@ WHERE  STATUS = 'DISABLED';
 ---- Recompile the disabled triggers
 
 col owner for a20;
+col TRIGGER_NAME for a30;
+col TRIGGER_TYPE for a20;
 SELECT OWNER,
        TRIGGER_NAME,
        TRIGGER_TYPE
