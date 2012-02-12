@@ -292,6 +292,15 @@ SELECT D.TABLESPACE_NAME,
 -- Part 2.4 Database Objects Check
 -- ########################################################
 
+-- Check user account and they default tablespace status
+
+col username for a20;
+col account_status for a20;
+col default_tablespace for a20;
+col temporary_tablespace for a20;
+select username, account_status, default_tablespace, temporary_tablespace from dba_users;
+
+
 -- Check tables and indexes in system tablespace  
 -- that NOT belong to SYS OR SYSTEM, etc
 ---- Check if there are many other objects,
