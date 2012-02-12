@@ -1,0 +1,54 @@
+Hp-ux:
+查看机器序列号
+# model
+# machinfo
+或者
+# getconf  CS_MACHINE_SERIAL 
+
+
+查看系统内核及版本
+# uname -a
+
+查看系统启动信息有无报错
+# dmesg
+
+查看系统日志，看看有无"EMS"字样，如果有，请通过event日志去查看，
+# vi /var/adm/syslog/syslog.log
+# vi /var/opt/resmon/event.log
+
+查看硬盘空间
+# bdf
+
+查看lvm的状态，看看是否有stale的状态的lv
+# vgdisplay -v
+
+查看swap的使用状态
+# swapinfo -tm
+
+查看系统有无性能瓶颈
+# vmstat 1 10
+
+查看有无系统备份：（以时间为名字的备份，例如：2008-05-28,18:21）
+# ls -l /var/opt/ignite/recovery/
+
+查看集群状态  都是up状态
+# cmviewcl -v
+
+查看关机日志
+# vi /etc/shutdownlog
+
+查看路由表
+# netstat -rn 
+
+查看网络接口
+# netstat -in
+
+查看网络设备是否正常（看看是否有 非"CLAIMED"状态的接口，非claimed有问题）
+# ioscan -funC lan
+
+查看设备是否正常（看看是否有 非"CLAIMED"状态, 可看到所有硬件的状态，不要有NO-HARDWARE的状态）
+# ioscan -fkn
+
+查看磁带的状态（看看是否有 非"CLAIMED"状态）
+# ioscan -funCtape
+

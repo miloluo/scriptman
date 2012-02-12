@@ -1,0 +1,9 @@
+cd C:\Program Files\Tivoli\tsm\baclient
+
+dsmadmc -outfile=a.log
+
+
+
+
+
+

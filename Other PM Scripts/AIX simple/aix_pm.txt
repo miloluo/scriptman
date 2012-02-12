@@ -1,0 +1,33 @@
+df -g
+
+lsvg -o | lsvg -il
+
+lsvg -o | lsvg -ip  
+
+lsdev -Cc disk
+
+lspv
+
+lspv hdisk0 
+
+errpt 
+
+errpt -a
+
+vmstat 1 10
+
+uname -uM
+
+lsmcode -A
+
+lssrc -g clutst
+
+fget_config -Av
+
+lsvg -o|lsvg -i
+
+lsps -a
+
+vmo -a
+
+oslevel -s

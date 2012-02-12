@@ -1,0 +1,3 @@
+1. ps -ef | grep java
+2. 看Server.out，每个domain都有一个日志。
+

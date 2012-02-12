@@ -1,0 +1,98 @@
+tsm巡检
+
+
+首先输入Dsmadmc，进入IBM Tivoli Storage Manager
+TSM1:[/home/xj]dsmadmc
+IBM Tivoli Storage Manager
+Command Line Administrative Interface - Version 5, Release 5, Level 0.0
+(c) Copyright by IBM Corporation and other(s) 1990, 2007. All Rights Reserved.
+
+Enter your user id:  admin
+
+Enter your password:  admin
+
+Session established with server TSMSVR: AIX-RS/6000
+  Server Version 5, Release 5, Level 2.0
+  Server date/time: 11/17/10   12:42:48  Last access: 11/17/10   11:32:50
+
+
+tsm: TSMSVR> q server   ---即可输入命令，进行相关查询：
+
+
+
+
+1》服务器名称及配置
+q server
+
+
+2》Library名称及配置
+q library
+
+
+3》DB名称及配置
+q DB F=D
+
+
+4》DB卷配置
+q dbvol f=d
+
+
+5》日志空间配置及使用
+q log f=d
+
+
+6》日志卷配置
+q logvol f=d
+
+
+7》驱动器配置
+q drive f=d
+
+
+8》节点配置
+q node f=d
+
+
+9》存储池配置及使用
+q stgpool f=d
+
+
+10》备份策略
+q policy f=d
+
+
+11》管理类
+q mgmtclass f=d
+
+
+12》计划任务
+q schedul f=d
+
+
+13》介质
+q libvol
+
+
+14》设备类
+q devclass
+
+
+15》全部事件 =
+q event
+
+
+16》计划任务，客户端对应
+q assoc
+
+
+17》文件系统空间使用率 => not windows
+q dirspace
+
+
+18》系统信息
+q system
+
+
+19》路径信息
+q path
+
