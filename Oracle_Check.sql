@@ -111,7 +111,6 @@ select name, round(bytes/1024/1024,3) "MB" from v$sgainfo;
 set linesize 120;
 column component format a20;
 column parameter format a20;
-
 alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
 select  * from v$sga_resize_ops;
 
@@ -415,7 +414,7 @@ WHERE HEIGHT>=4;
 -- Unindexed tables
 ---- Only a check for necessary index creation
 
-set linesize 80;
+set linesize 120;
 col owner for a10;
 col segment_name for a30;
 col segment_type for a10;
