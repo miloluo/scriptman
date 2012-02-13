@@ -430,7 +430,7 @@ SELECT   /*+ rule */
                WHERE t.owner = i.table_owner
                      AND t.segment_name = i.table_name)
     AND t.segment_type IN ('TABLE', 'TABLE PARTITION')
-    AND t.owner NOT IN('SYS', 'SYSTEM', 'SYSMAN', 'DMSYS', 'EXFSYS','MDSYS', 'OLAPSYS', 'ORDSYS', 'TSMSYS', 'WMSYS', 'OUTLN', 'WMSYS', 'SCOTT' );
+    AND t.owner NOT IN('SYS', 'SYSTEM', 'SYSMAN', 'DMSYS', 'EXFSYS','MDSYS', 'OLAPSYS', 'ORDSYS', 'TSMSYS', 'WMSYS', 'OUTLN', 'WMSYS', 'SCOTT' )
 ORDER BY 5 DESC;
 
 
