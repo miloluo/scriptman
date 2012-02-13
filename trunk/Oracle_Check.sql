@@ -197,8 +197,8 @@ FROM   TABLE(dbms_feature_usage_report.display_text);
 
 -- Check Total size of Datafile 
 
-col Total(GB) for 999999.999;
-col Total(TB) for 999999.999;
+col Total(GB) for 999,999.99;
+col Total(TB) for 999,999.99;
 SELECT ( d1 + d2 ) / 1024 / 1024 / 1024        "Total(GB)",
        ( d1 + d2 ) / 1024 / 1024 / 1024 / 1024 "Total(TB)"
 FROM   (SELECT Sum(bytes) d1
@@ -236,11 +236,13 @@ FROM DBA_DATA_FILES ORDER BY 1;
 
 
 -- Check temp tablespace size
-
+col Total(M)  for 999,999,999;
+col FREE(M) for 999,999,999;
+col USED(MB) for 999,999,999;
 select tablespace_name,
-       (sum(bytes_used) + sum(bytes_free)) / 1048576 "Total space(MB)",
-       sum(bytes_used) / 1048576 "Used(MB)",
-       sum(bytes_free) / 1048576 "Free(MB)",
+       (sum(bytes_used) + sum(bytes_free)) / 1048576 "TOTAL(MB)",
+       sum(bytes_used) / 1048576 "USED(MB)",
+       sum(bytes_free) / 1048576 "FREE(M)",
        sum(bytes_used) / (sum(bytes_used) + sum(bytes_free)) * 100 "Used rate(%)"
   from v$temp_space_header
  group by tablespace_name;
@@ -252,6 +254,9 @@ select tablespace_name,
 
 set linesize 120;
 col tablespace_name for a20;
+col Total(M)  for 999,999,999;
+col USE(M) for 999,999,999;
+col FREE(M) for 999,999,999;
 SELECT D.TABLESPACE_NAME,
        SPACE "Total(M)",
        SPACE - NVL(FREE_SPACE, 0) "USED(M)",
@@ -334,7 +339,7 @@ FROM   dba_tablespaces;
 col group# for 999999;
 col member# for 999;
 col "log file path" for a35;
-col "MB" for 99999;
+col "MB" for 999,999,999;
 SELECT l.group#,
        l.members           AS "member#",
        lf.member           AS "log file path",
@@ -366,8 +371,8 @@ ORDER  BY thread#, sequence#;
 set linesize 120;
 col status for a10;
 col name for a40;
-col block_size for 99999;
-col file_size_blks for 9999999;
+col block_size for 999,999,999;
+col file_size_blks for 999,999,999;
 SELECT *
 FROM   v$controlfile; 
 
@@ -419,7 +424,7 @@ col owner for a10;
 col segment_name for a30;
 col segment_type for a10;
 col tablespace_name for a15;
-col size_mb for 9999999;
+col size_mb for 999,999,999;
 SELECT   /*+ rule */
         owner, segment_name, segment_type, tablespace_name,
         TRUNC (BYTES / 1024 / 1024, 1) size_mb
@@ -504,8 +509,8 @@ WHERE  a.name = 'sorts (disk)'
 ---- This value should greater than 95%
 
 col name for a20;
-col gets for 999999;
-col misses for 99999;
+col gets for 999,999,999;
+col misses for 999,999,999;
 SELECT name,
        gets,
        misses,
@@ -584,7 +589,7 @@ ORDER  BY o.object_id,
 ---- Attention the top wait events
 
 col event for a40;
-col time_waited for 99999999999999999999;
+col time_waited for 999,999,999,999,999,999,999;
 SELECT *
 FROM   (SELECT event,
                time_waited
