@@ -10,6 +10,7 @@
 ----        modify the comments in wait and related sql (Milo)
 ----        add query sga auto resize view v$sga_resize_ops (Milo)
 ---  v0.1.2 Add more contents for pm report and modify the order of sql queries (Milo) 
+---  v0.1.3 Add some more checks
 
 -- ##################################################################################
 
@@ -96,6 +97,10 @@ SELECT inst_id,
        archiver,
        database_status
   FROM gv$instance;
+
+-- Add from v0.1.3
+-- Check parameter name: db_name, instance_name, etc
+show parameter name;
 
 
 -- Add from v0.1.2
@@ -612,6 +617,11 @@ where b.sid=sw.sid
 	and s.hash_value=b.sql_hash_value 
 	and s.sql_id=b.sql_id 
 order by s.address,s.piece;
+
+-- ##################################################################################
+-- Add from v0.1.3
+-- Check if there is crs in RAC ( double check )
+! crs_stat -t
 
 
 
