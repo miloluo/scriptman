@@ -10,6 +10,7 @@
 ----        modify nls_date_format=english to avoid spool file issue (Milo)
 ----        modify the comments in wait and related sql (Milo) 
 ----        add query sga auto resize view v$sga_resize_ops (Milo)
+---- v0.2.2 Sync Oracle_check format with this file (Milo)
 
 
 -- ##################################################################################
@@ -25,6 +26,7 @@
 --SQL> execute statspack.snap;
 --SQL> @ ?/rdbms/admin/spreport.sql
 
+----awr report
 --SQL> exec dbms_workload_repository.create_snapshot();
 --SQL> @ ?/rdbms/admin/awrrpt.sql
 
@@ -76,8 +78,10 @@ set echo on
 
 
 -------------------------------
--- Check Resource status
-! crs_stat -t -v 
+
+-- ########################################################
+-- Part 2.1 Instance (SGA, PGA, Some parameters)
+-- ########################################################
 
 
 -- Check instance running status
@@ -101,13 +105,66 @@ SELECT inst_id,
        database_status
   FROM gv$instance;
 
+-- Add from v0.2.2
+-- Check parameter name: db_name, instance_name, etc
+show parameter name;
 
+
+-- Add from v0.2.2
+-- Check sga components' size (Avaliable for 10g and above)
+
+col name for a35;
+col MB for 999,999,999;
+select name, round(bytes/1024/1024,3) "MB" from v$sgainfo;
+
+-- Added from v0.1.1
+-- Query sga auto resize action (Avaiable for 10g and above)
+
+set linesize 120;
+column component format a20;
+column parameter format a20;
+alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
+select  * from v$sga_resize_ops;
+
+
+-- Add from v0.2.2
+-- Check sga basic info (Avaliable for 9i and above)
+
+show sga;
+
+-- Add from v0.2.2
+-- Check sga and pga info (Avaliable for 9i and above)
+
+show parameter ga;
+
+show parameter size;
+
+
+-- Non-default init parameters. 
+
+column name format a30 tru 
+column value format a48 wra 
+select name, value 
+from v$parameter 
+where isdefault = 'FALSE';
+
+
+-- ########################################################
+-- Part 2.2 DB Settings
+-- ########################################################
 
 -- Check DB version
 
 SELECT *
 FROM   v$version;  
 
+
+-- Check Archive log mode 
+
+select log_mode 
+from v$database;
+
+archive log list;
 
 -- Check DB properties
 
@@ -139,11 +196,22 @@ SELECT comp_name,
 FROM   dba_registry; 
 
 
+-- Check which new feature has been enabled
+---- This section displays the summary of Usage for Database Features.
+---- The Currently Used column is TRUE if usage was detected for the feature at the last sample time.
+
+SELECT output
+FROM   TABLE(dbms_feature_usage_report.display_text); 
+
+
+-- ########################################################
+-- Part 2.3 Datafiles Check
+-- ########################################################
 
 -- Check Total size of Datafile 
 
-col Total(GB) for 999999.999;
-col Total(TB) for 999999.999;
+col Total(GB) for 999,999.99;
+col Total(TB) for 999,999.99;
 SELECT ( d1 + d2 ) / 1024 / 1024 / 1024        "Total(GB)",
        ( d1 + d2 ) / 1024 / 1024 / 1024 / 1024 "Total(TB)"
 FROM   (SELECT Sum(bytes) d1
@@ -151,6 +219,46 @@ FROM   (SELECT Sum(bytes) d1
        (SELECT Sum(bytes) d2
         FROM   v$tempfile); 
 
+-- Check datafile count
+
+select count(name) datafile_cnt from  
+(select name from v$datafile
+ union
+select name from v$tempfile);
+
+-- Check tablespace count
+
+select count(*) from dba_tablespaces;
+
+
+-- Check datafile type along with ls -l check
+
+SELECT name
+FROM   v$datafile;  
+
+
+-- Check if the files have autoextensiable attributes
+ 
+col tablespace_name for a20;
+col file_name for a45;
+col autoextensible for a3;
+SELECT TABLESPACE_NAME, 
+       FILE_NAME, 
+       AUTOEXTENSIBLE 
+FROM DBA_DATA_FILES ORDER BY 1;
+
+
+-- Check temp tablespace size
+col Total(M)  for 999,999,999;
+col FREE(M) for 999,999,999;
+col USED(MB) for 999,999,999;
+select tablespace_name,
+       (sum(bytes_used) + sum(bytes_free)) / 1048576 "TOTAL(MB)",
+       sum(bytes_used) / 1048576 "USED(MB)",
+       sum(bytes_free) / 1048576 "FREE(M)",
+       sum(bytes_used) / (sum(bytes_used) + sum(bytes_free)) * 100 "Used rate(%)"
+  from v$temp_space_header
+ group by tablespace_name;
 
 
 -- Check availabe space of each tablespace
@@ -159,6 +267,9 @@ FROM   (SELECT Sum(bytes) d1
 
 set linesize 120;
 col tablespace_name for a20;
+col Total(M)  for 999,999,999;
+col USE(M) for 999,999,999;
+col FREE(M) for 999,999,999;
 SELECT D.TABLESPACE_NAME,
        SPACE "Total(M)",
        SPACE - NVL(FREE_SPACE, 0) "USED(M)",
@@ -194,14 +305,21 @@ SELECT D.TABLESPACE_NAME,
  ORDER BY 4;
 
 
--- Check datafile type along with ls -l check
+-- ########################################################
+-- Part 2.4 Database Objects Check
+-- ########################################################
 
-SELECT name
-FROM   v$datafile;  
+-- Check user account and they default tablespace status
+
+col username for a20;
+col account_status for a20;
+col default_tablespace for a20;
+col temporary_tablespace for a20;
+select username, account_status, default_tablespace, temporary_tablespace from dba_users;
 
 
 -- Check tables and indexes in system tablespace  
--- that NOT belong to SYS OR SYSTEM
+-- that NOT belong to SYS OR SYSTEM, etc
 ---- Check if there are many other objects,
 ---- place in system tablespace, 
 ---- if so, then performance might be affected
@@ -209,12 +327,12 @@ FROM   v$datafile;
 SELECT DISTINCT owner 
 FROM   dba_tables
 WHERE  tablespace_name = 'SYSTEM'
-       AND owner NOT IN ('SYS', 'SYSTEM', 'MDSYS', 'OLAPSYS', 'OUTLN')
+       AND owner NOT IN ('SYS', 'SYSTEM', 'SYSMAN', 'DMSYS', 'EXFSYS','MDSYS', 'OLAPSYS', 'ORDSYS', 'TSMSYS', 'WMSYS', 'OUTLN', 'WMSYS' )
 UNION
 SELECT DISTINCT owner 
 FROM   dba_indexes
 WHERE  tablespace_name = 'SYSTEM'
-       AND owner NOT IN ('SYS', 'SYSTEM', 'MDSYS', 'OLAPSYS', 'OUTLN') ; 
+       AND owner NOT IN ('SYS', 'SYSTEM', 'SYSMAN', 'DMSYS', 'EXFSYS','MDSYS', 'OLAPSYS', 'ORDSYS', 'TSMSYS', 'WMSYS', 'OUTLN', 'WMSYS' );
 
 
 
@@ -226,22 +344,6 @@ SELECT tablespace_name,
 FROM   dba_tablespaces; 
 
 
--- Check IO status of each datafile
----- To find out which datafile is in high write/read status
-
-set linesize 100;
-col file_name for a46
-SELECT df.name                                          file_name,
-       fs.phyrds                                        reads,
-       fs.phywrts                                       writes,
-       ( fs.readtim / Decode(fs.phyrds, 0, -1,
-                                        fs.phyrds) )    readtime,
-       ( fs.writetim / Decode(fs.phywrts, 0, -1,
-                                          fs.phywrts) ) writetime
-FROM   v$datafile df,
-       v$filestat fs
-WHERE  df.file# = fs.file#
-ORDER  BY df.name; 
 
 
 
@@ -253,8 +355,8 @@ ORDER  BY df.name;
 
 col group# for 999999;
 col member# for 999;
-col "log file path" for a30;
-col "MB" for 99999;
+col "log file path" for a35;
+col "MB" for 999,999,999;
 SELECT l.group#,
        l.members           AS "member#",
        lf.member           AS "log file path",
@@ -288,8 +390,8 @@ ORDER  BY thread#, sequence#;
 set linesize 120;
 col status for a10;
 col name for a40;
-col block_size for 99999;
-col file_size_blks for 9999999;
+col block_size for 999,999,999;
+col file_size_blks for 999,999,999;
 SELECT *
 FROM   v$controlfile; 
 
@@ -297,6 +399,9 @@ FROM   v$controlfile;
 -- Check if there is invalid objects
 ---- Affirm the status of the objects
 
+col owner for a20;
+col object_name for a30;
+col object_type for a15;
 SELECT OWNER,
        OBJECT_NAME,
        OBJECT_TYPE
@@ -307,6 +412,11 @@ WHERE  STATUS = 'INVALID';
 -- Check if there is unusable indexes
 ---- Affirm the use of the indexes
 
+col owner for a20;
+col index_name for a20;
+col index_type for a15;
+col table_name for a20;
+col status for a10;
 SELECT OWNER,
        INDEX_NAME,
        INDEX_TYPE,
@@ -315,16 +425,25 @@ SELECT OWNER,
 FROM   DBA_INDEXES
 WHERE  STATUS = 'UNUSABLE'; 
 
+-- Check if the indexes need rebuild
+---- rebuild the height>=4 indexes
+
+SELECT NAME,
+       HEIGHT,
+       DEL_LF_ROWS/LF_ROWS
+FROM INDEX_STATS 
+WHERE HEIGHT>=4;
+
 
 -- Unindexed tables
 ---- Only a check for necessary index creation
 
-set linesize 80;
+set linesize 120;
 col owner for a10;
 col segment_name for a30;
 col segment_type for a10;
 col tablespace_name for a15;
-col size_mb for 9999999;
+col size_mb for 999,999,999;
 SELECT   /*+ rule */
         owner, segment_name, segment_type, tablespace_name,
         TRUNC (BYTES / 1024 / 1024, 1) size_mb
@@ -335,7 +454,7 @@ SELECT   /*+ rule */
                WHERE t.owner = i.table_owner
                      AND t.segment_name = i.table_name)
     AND t.segment_type IN ('TABLE', 'TABLE PARTITION')
-    AND t.owner NOT IN ('SYS', 'SYSTEM', 'SCOTT')
+    AND t.owner NOT IN('SYS', 'SYSTEM', 'SYSMAN', 'DMSYS', 'EXFSYS','MDSYS', 'OLAPSYS', 'ORDSYS', 'TSMSYS', 'WMSYS', 'OUTLN', 'WMSYS', 'SCOTT' )
 ORDER BY 5 DESC;
 
 
@@ -343,10 +462,11 @@ ORDER BY 5 DESC;
 -- Check if there have disabled constraints
 ---- Enable the disabled constraints
 
-set linesize 100;
+set linesize 120;
 col owner for a20;
-col constraint_name for a30;
-col table_name for a30;
+col CONSTRAINT_NAME for a30;
+col CONSTRAINT_TYPE for a15;
+col TABLE_NAME for a20;
 SELECT OWNER,
        CONSTRAINT_NAME,
        CONSTRAINT_TYPE,
@@ -360,6 +480,8 @@ WHERE  STATUS = 'DISABLED';
 ---- Recompile the disabled triggers
 
 col owner for a20;
+col TRIGGER_NAME for a30;
+col TRIGGER_TYPE for a20;
 SELECT OWNER,
        TRIGGER_NAME,
        TRIGGER_TYPE
@@ -378,6 +500,9 @@ where  status = 'ACTIVE'
 group by INST_ID ;  
 
 
+-- ########################################################
+-- Part 2.5 Database Performance Check
+-- ########################################################
 
 -- Check Buffer Cache hit ratio
 ---- This value should greater than 95%
@@ -409,8 +534,8 @@ WHERE  a.name = 'sorts (disk)'
 ---- This value should greater than 95%
 
 col name for a20;
-col gets for 999999;
-col misses for 99999;
+col gets for 999,999,999;
+col misses for 999,999,999;
 SELECT name,
        gets,
        misses,
@@ -440,6 +565,23 @@ FROM   V$ROWCACHE;
 SELECT ROUND(SUM(PINS) / (SUM(PINS) + SUM(RELOADS)), 2) * 100 "Labrary Cache Hit Ratio(%)"
 FROM V$LIBRARYCACHE;
 
+
+-- Check IO status of each datafile
+---- To find out which datafile is in high write/read status
+
+set linesize 100;
+col file_name for a46
+SELECT df.name                                          file_name,
+       fs.phyrds                                        reads,
+       fs.phywrts                                       writes,
+       ( fs.readtim / Decode(fs.phyrds, 0, -1,
+                                        fs.phyrds) )    readtime,
+       ( fs.writetim / Decode(fs.phywrts, 0, -1,
+                                          fs.phywrts) ) writetime
+FROM   v$datafile df,
+       v$filestat fs
+WHERE  df.file# = fs.file#
+ORDER  BY df.name; 
 
 
 -- Check if there lock exists
@@ -474,7 +616,7 @@ ORDER  BY o.object_id,
 ---- Attention the top wait events
 
 col event for a40;
-col time_waited for 99999999999999999999;
+col time_waited for 999,999,999,999,999,999,999;
 SELECT *
 FROM   (SELECT event,
                time_waited
@@ -499,26 +641,14 @@ where b.sid=sw.sid
 	and s.sql_id=b.sql_id 
 order by s.address,s.piece;
 
-
-
--- Check which new feature has been enabled
----- This section displays the summary of Usage for Database Features.
----- The Currently Used column is TRUE if usage was detected for the feature at the last sample time.
-
-SELECT output
-FROM   TABLE(dbms_feature_usage_report.display_text); 
-
--- Added from v0.2.1
--- Query sga auto resize action
-
-set linesize 120;
-column component format a20;
-column parameter format a20;
-alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
-select  * from v$sga_resize_ops;
+-- ##################################################################################
+-- Add from v0.2.2
+-- Check if there is crs in RAC ( double check )
+! crs_stat -t
 
 
 
+-- ##################################################################################
 
 spool off
 exit;
