@@ -161,7 +161,7 @@ FROM   v$version;
 
 -- Check Archive log mode 
 
-select log_mode 
+select dbid,log_mode 
 from v$database;
 
 archive log list;
@@ -644,7 +644,7 @@ order by s.address,s.piece;
 -- ##################################################################################
 -- Add from v0.2.2
 -- Check if there is crs in RAC ( double check )
-! crs_stat -t
+! crs_stat -t 
 
 
 
