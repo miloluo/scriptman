@@ -9,8 +9,8 @@
 ----        modify nls_date_format=english to avoid spool file issue (Milo) 
 ----        modify the comments in wait and related sql (Milo)
 ----        add query sga auto resize view v$sga_resize_ops (Milo)
----  v0.1.2 Add more contents for pm report and modify the order of sql queries (Milo) 
----  v0.1.3 Add some more checks
+---- v0.1.2 Add more contents for pm report and modify the order of sql queries (Milo) 
+---- v0.1.3 Add backup info part (Jet)
 
 -- ##################################################################################
 
@@ -97,10 +97,6 @@ SELECT inst_id,
        archiver,
        database_status
   FROM gv$instance;
-
--- Add from v0.1.3
--- Check parameter name: db_name, instance_name, etc
-show parameter name;
 
 
 -- Add from v0.1.2
@@ -618,11 +614,17 @@ where b.sid=sw.sid
 	and s.sql_id=b.sql_id 
 order by s.address,s.piece;
 
--- ##################################################################################
--- Add from v0.1.3
--- Check if there is crs in RAC ( double check )
-! crs_stat -t
 
+
+-- ########################################################
+-- Part 2.6 Database RMAN Backup Information
+-- ########################################################
+set linesize 200;
+col handle for a50;
+col comments for a15;
+alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
+select bs_key, bp_key, device_type, handle, tag,  deleted, status, start_time, completion_time, comments 
+from v$backup_piece_details;
 
 
 -- ##################################################################################
