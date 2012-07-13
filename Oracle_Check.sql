@@ -11,6 +11,8 @@
 ----        add query sga auto resize view v$sga_resize_ops (Milo)
 ---- v0.1.2 Add more contents for pm report and modify the order of sql queries (Milo) 
 ---- v0.1.3 Add backup info part (Jet)
+---- v0.1.4 Add some columns(version, modified) in dba_registry (Milo)
+
 
 -- ##################################################################################
 
@@ -79,7 +81,7 @@ set echo on
 
 -- Check instance running status
 
-set linesize 120;
+set linesize 200;
 col inst_id for 999;
 col instance_name for a15;
 col host_name for a10;
@@ -109,7 +111,7 @@ select name, round(bytes/1024/1024,3) "MB" from v$sgainfo;
 -- Added from v0.1.1
 -- Query sga auto resize action (Avaiable for 10g and above)
 
-set linesize 120;
+set linesize 200;
 column component format a20;
 column parameter format a20;
 alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
@@ -157,7 +159,7 @@ archive log list;
 
 -- Check DB properties
 
-set linesize 120;
+set linesize 200;
 col property_name for a30;
 col property_value for a40;
 col description for a40;
@@ -167,7 +169,7 @@ FROM   database_properties;
 
 -- Check DB option and feature
 
-set linesize 100;
+set linesize 200;
 col parameter for a40;
 col value for a8;
 SELECT *
@@ -179,8 +181,11 @@ FROM   v$option;
 ---- Normally, all component status should be "VALID"
 
 col comp_name for a40;
-SELECT comp_name,
-       status 
+col version for a12;
+SELECT comp_name, 
+       version,
+       status,
+       modified 
 FROM   dba_registry; 
 
 
@@ -253,7 +258,7 @@ select tablespace_name,
 ---- If the USE(%) > 85%, 
 ---- then the tablespace should be consider to extented. 
 
-set linesize 120;
+set linesize 200;
 col tablespace_name for a20;
 col Total(M)  for 999,999,999;
 col USE(M) for 999,999,999;
@@ -369,7 +374,7 @@ ORDER  BY thread#, sequence#;
 
 -- Check controlfile status
 
-set linesize 120;
+set linesize 200;
 col status for a10;
 col name for a40;
 col block_size for 999,999,999;
@@ -419,8 +424,7 @@ WHERE HEIGHT>=4;
 
 -- Unindexed tables
 ---- Only a check for necessary index creation
-
-set linesize 120;
+set linesize 200;
 col owner for a10;
 col segment_name for a30;
 col segment_type for a10;
@@ -443,7 +447,7 @@ ORDER BY 5 DESC;
 -- Check if there have disabled constraints
 ---- Enable the disabled constraints
 
-set linesize 120;
+set linesize 200;
 col owner for a20;
 col CONSTRAINT_NAME for a30;
 col CONSTRAINT_TYPE for a15;
@@ -545,7 +549,7 @@ FROM V$LIBRARYCACHE;
 -- Check IO status of each datafile
 ---- To find out which datafile is in high write/read status
 
-set linesize 100;
+set linesize 200;
 col file_name for a46
 SELECT df.name                                          file_name,
        fs.phyrds                                        reads,
@@ -602,7 +606,7 @@ WHERE  rownum < 11;
 -- Query which sql experience the wait
 ---- Attention the always appeared SQL
 
-set linesize 120;
+set linesize 200;
 col sql_text for a60;
 col event for a30;
 select s.sql_text, sw.event 
