@@ -1,0 +1,166 @@
+---- #################################################################################################################
+-- Procedure: proc_fetch_tinfo ( Fetch Tunning Info )
+-- Purpose: For tuning sql, we want to get the object info in sql statement
+-- Author: Milo
+-- Create: April 06, 2012
+
+-- Usage: you can provide the object the first argument of the procedure, multiple objects can be splited by ','
+-- Before execute the procedure, PLEASE MAKE SURE, YOU HAVE DBA PRIVILLEGE AND SET SERVEROUTPUT ON;
+-- Eg 1: single object:
+-----> exec proc_fetch_ddl('tab1');
+-- Eg 2: multiple objects:
+-----> exec proc_fetch_ddl('tab1,tab2');
+
+-- Maintain log:
+----> April 6, 2012 create the script (Milo)
+
+---- #################################################################################################################
+
+
+
+create or replace procedure proc_fetch_tinfo (obj_list IN varchar2)    
+as
+
+-- ### Max loop count
+---- In order to not get the DB or OS busy, suggest LESS than 10
+con_max_loop CONSTANT int := 10;
+
+-- ## count the loop
+v_loop_cnt int := 0;
+
+
+-- ### Obj list
+v_obj_list varchar2(1000);
+
+-- ### Single obj
+v_obj varchar2(50);
+
+-- ### The position of one object name
+v_str_pos int; 
+
+-- ### Judge the object type: 
+----  0 - unknown type
+----  1 - partition table
+----  2 - normal table
+----  3 - view
+----  4 - synonym
+v_obj_type int;
+
+
+-- ### Object_type
+v_type_name varchar2(50);
+
+
+-- ### Multiple results return
+v_mul_rows int;
+
+-- ### Given schema 
+v_given_schema varchar2(200);
+
+
+begin
+	-- ### Passin the obj list to variable 
+	v_obj_list := obj_list;
+	
+	-- ### Use ',' to split the each object name 	
+	v_str_pos := instr(v_obj_list, ',');
+
+	-- ### If there is only one left or single object pass-in 
+	if  v_str_pos = 0
+	then
+		-- ### Set v_str_pos -1 stand for this is the last object in the v_obj_list
+		v_str_pos := -1;
+		v_obj := trim(v_obj_list);
+		--dbms_output.put_line('v_obj:' ||v_obj );
+		--dbms_output.put_line('v_obj length:' ||length(v_obj) );
+
+		dbms_output.put_line('-- @@@@@@@@@@@@@ The 1 th object @@@@@@@@@@@@@');
+		dbms_output.put_line('---------object name: '||v_obj||'------------');
+		dbms_output.put_line('col object_name for a30;');
+		dbms_output.put_line('select owner, object_name, object_type from dba_objects where object_name = '''||upper(v_obj)||''';');
+		--dbms_output.put_line('select owner, table_name, tablespace_name, status, freelists, logging, last_analyzed from dba_tables where lower(table_name)='''||v_obj||''';');
+		dbms_output.put_line('-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'||chr(10));
+		return ;
+	end if; 
+
+
+	-- ### Get the first object name in the v_object_set 			 
+	v_obj := trim(substr(v_obj_list, 1, v_str_pos-1));
+
+	-- ### Adjust output format statements
+	dbms_output.put_line(chr(10)||'set linesize 200;');
+	dbms_output.put_line('alter session set nls_date_format=''yyyy-mm-dd hh24:mi:ss'';'||chr(10));
+	
+
+	-- ### Split the objects' names and process in the loop 
+	while v_str_pos  != 0 
+	loop
+
+		-- Make sure the loop count is not exceeds the max one
+		v_loop_cnt := v_loop_cnt + 1;
+
+		if v_loop_cnt > con_max_loop
+		then
+			dbms_output.put_line('!!!!!!!!!!!!!!!!!!!!!!!!!!');
+			dbms_output.put_line('Max loop count reach!');
+                        dbms_output.put_line('Safely jump out the loop!');
+			return;
+		end if;
+
+		v_obj := trim(substr(v_obj_list, 1, v_str_pos-1));
+		--dbms_output.put_line('v_obj:' ||v_obj );
+		--dbms_output.put_line('v_obj length:' ||length(v_obj) );
+
+
+
+
+		-- ################# Filter the object type part #########################
+		-- 1. Check if it's partitions table ;
+		-- 2. Check if it's the normal table/view ;
+		-- 3. Check if it's public synonym ( get the local or remote table/view infomation) ;
+		-- 4. If none of the above obj found, then raise error
+		-- #######################################################################
+
+
+
+
+    		
+		dbms_output.put_line('-- @@@@@@@@@@@@@ The ' || v_loop_cnt || ' th object @@@@@@@@@@@@@');
+		dbms_output.put_line('---------object name: '||v_obj||'------------');
+		dbms_output.put_line('col object_name for a30;');
+		dbms_output.put_line('select owner, object_name, object_type from dba_objects where object_name = '''||upper(v_obj)||''';');
+		--dbms_output.put_line('select owner, table_name, tablespace_name, status, freelists, logging, last_analyzed from dba_tables where lower(table_name)='''||v_obj||''';');
+		dbms_output.put_line('-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'||chr(10));
+
+		-- ### Trim the object set and ,update it's content 
+		v_obj_list := trim(substr(v_obj_list,v_str_pos+1));
+		--dbms_output.put_line('v_obj_list:'||v_obj_list);
+
+		-- ### Update the str position, that is ',' position  
+		v_str_pos := instr(v_obj_list, ',');
+
+
+	end loop;	
+
+
+	-- ### Deal with last objects
+	if  v_str_pos = 0
+	then
+		-- ### Set v_str_pos -1 stand for this is the last object in the v_obj_list
+		v_str_pos := -1;
+		v_obj := trim(v_obj_list);
+		--dbms_output.put_line('v_obj:' ||v_obj );
+		--dbms_output.put_line('v_obj length:' ||length(v_obj) );
+
+		dbms_output.put_line('-- @@@@@@@@@@@@@ The last object @@@@@@@@@@@@@');
+		dbms_output.put_line('---------object name: '||v_obj||'------------');
+		dbms_output.put_line('col object_name for a30;');
+		dbms_output.put_line('select owner, object_name, object_type from dba_objects where object_name = '''||upper(v_obj)||''';');
+		--dbms_output.put_line('select owner, table_name, tablespace_name, status, freelists, logging, last_analyzed from dba_tables where lower(table_name)='''||v_obj||''';');
+		dbms_output.put_line('-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'||chr(10));
+		return ;
+	end if; 
+
+end;
+/
+
