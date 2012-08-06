@@ -1,0 +1,266 @@
+
+
+echo "######### db2tim ###########"
+
+su - db2tim
+mkdir db2_pm
+
+echo 'uname -a:' > db2_pm/db2tim_pm.out;
+uname -a >> db2_pm/db2tim_pm.out 
+echo 'db2level:' >> db2_pm/db2tim_pm.out;
+db2level >> db2_pm/db2tim_pm.out
+
+echo 'db2mtrk -d -v:' >> db2_pm/db2tim_pm.out;
+db2mtrk -d -v >> db2_pm/db2tim_pm.out  
+echo 'db2set:' >> db2_pm/db2tim_pm.out;
+db2set >> db2_pm/db2tim_pm.out
+
+echo 'db2 list db directory:' >> db2_pm/db2tim_pm.out;
+db2 list db directory >> db2_pm/db2tim_pm.out
+echo 'db2 list active databases:' >> db2_pm/db2tim_pm.out;
+db2 list active databases >> db2_pm/db2tim_pm.out
+
+
+echo "db ====> xjtodo" > db2_pm/xjtodo_pm.out;
+
+echo "tablespaces of xjtodo:" >> db2_pm/xjtodo_pm.out;
+db2pd -db  xjtodo -tablespaces >> db2_pm/xjtodo_pm.out
+
+echo >> db2_pm/xjtodo_pm.out;
+echo "connect to xjtodo:" >> db2_pm/xjtodo_pm.out;
+db2 connect to xjtodo >> db2_pm/xjtodo_pm.out 
+
+echo >> db2_pm/xjtodo_pm.out;
+echo "select max(stats_time) from syscat.tables" >> db2_pm/xjtodo_pm.out
+db2 "select max(stats_time) from syscat.tables" >> db2_pm/xjtodo_pm.out
+
+echo >> db2_pm/xjtodo_pm.out;
+echo "db2 list history reorg all for  xjtodo" >> db2_pm/xjtodo_pm.out
+db2 list history reorg all for  xjtodo >> db2_pm/xjtodo_pm.out
+
+echo >> db2_pm/xjtodo_pm.out;
+echo "db2 list history backup all for  xjtodo" >> db2_pm/xjtodo_pm.out
+db2 list history backup all for  xjtodo >> db2_pm/xjtodo_pm.out
+
+echo "db2pd -db xjtodo -locks" >> db2_pm/xjtodo_pm.out
+db2pd -db xjtodo -locks >> db2_pm/xjtodo_pm.out
+
+echo "db2 get snapshot for all on xjtodo" >> db2_pm/xjtodo_pm.out
+db2 get snapshot for all on  xjtodo >> db2_pm/xjtodo_pm.out
+
+echo "db2 get dbm cfg (xjtodo)" >> db2_pm/xjtodo_pm.out
+db2 get dbm cfg >> db2_pm/xjtodo_pm.out
+
+echo "db2 get db cfg for xjtodo" >> db2_pm/xjtodo_pm.out
+db2 get db cfg for xjtodo >> db2_pm/xjtodo_pm.out
+
+echo "db2 get_dbsize_info:" >> db2_pm/xjtodo_pm.out
+db2 << EOF >> db2_pm/xjtodo_pm.out
+call get_dbsize_info(?,?,?,-1)
+list tablespaces show detail
+EOF
+
+
+echo "############################"
+
+
+echo "db ====> itimdb" >> db2_pm/itimdb_pm.out;
+
+echo "tablespace of itimdb:" >> db2_pm/itimdb_pm.out
+db2pd -db  itimdb -tablespaces >> db2_pm/itimdb_pm.out
+
+echo "connect to itimdb:" >> db2_pm/itimdb_pm.out
+db2 connect to itimdb >> db2_pm/itimdb_pm.out
+
+echo "select max(stats_time) from syscat.tables" >> db2_pm/itimdb_pm.out
+db2 "select max(stats_time) from syscat.tables" >> db2_pm/itimdb_pm.out
+
+echo "db2 list history reorg all for  itimdb" >> db2_pm/itimdb_pm.out
+db2 list history reorg all for  itimdb >> db2_pm/itimdb_pm.out
+
+echo "db2 list history backup all for  itimdb" >> db2_pm/itimdb_pm.out
+db2 list history backup all for  itimdb >> db2_pm/itimdb_pm.out
+
+echo "db2pd -db itimdb -locks" >> db2_pm/itimdb_pm.out
+db2pd -db itimdb -locks >> db2_pm/itimdb_pm.out
+
+echo "db2 get snapshot for all on  itimdb" >> db2_pm/itimdb_pm.out
+db2 get snapshot for all on  itimdb >> db2_pm/itimdb_pm.out
+
+echo "db2 get dbm cfg of itimdb" >> db2_pm/itimdb_pm.out
+db2 get dbm cfg >> db2_pm/itimdb_pm.out
+
+echo "db2 get db cfg for itimdb" >> db2_pm/itimdb_pm.out
+db2 get db cfg for itimdb >> db2_pm/itimdb_pm.out
+
+echo "tablespace detail:" >> db2_pm/itimdb_pm.out
+db2 << EOF >> db2_pm/itimdb_pm.out
+call get_dbsize_info(?,?,?,-1)
+list tablespaces show detail
+EOF
+
+
+
+echo "############################"
+
+
+
+
+echo "######## idsldap ###########"
+
+su - idsldap
+mkdir db2_pm
+
+echo "uname -a:" > db2_pm/idsldap_pm.out
+uname -a >> db2_pm/idsldap_pm.out
+
+echo "db2level:" >> db2_pm/idsldap_pm.out
+db2level >> db2_pm/idsldap_pm.out
+
+echo "db2mtrk:" >> db2_pm/idsldap_pm.out
+db2mtrk -d -v >> db2_pm/idsldap_pm.out
+echo "db2set:" >> db2_pm/idsldap_pm.out
+db2set >> db2_pm/idsldap_pm.out
+
+echo "db2 list db directory" >> db2_pm/idsldap_pm.out
+db2 list db directory >> db2_pm/idsldap_pm.out
+echo "db2 list active databases" >> db2_pm/idsldap_pm.out
+db2 list active databases >> db2_pm/idsldap_pm.out
+
+echo "db ====> ldapclog" > db2_pm/ldapclog_pm.out;
+echo "db2pd -db  LDAPCLOG -tablespaces" >> db2_pm/ldapclog_pm.out
+db2pd -db  LDAPCLOG -tablespaces >> db2_pm/ldapclog_pm.out
+
+echo "connect to LDAPCLOG:" >> db2_pm/ldapclog_pm.out
+db2 connect to LDAPCLOG >> db2_pm/ldapclog_pm.out
+
+echo "select max(stats_time) from syscat.tables:" >> db2_pm/ldapclog_pm.out
+db2 "select max(stats_time) from syscat.tables" >> db2_pm/ldapclog_pm.out
+
+echo "db2 list history reorg all for  LDAPCLOG:" >> db2_pm/ldapclog_pm.out
+db2 list history reorg all for  LDAPCLOG >> db2_pm/ldapclog_pm.out
+
+echo "db2 list history backup all for  LDAPCLOG:" >> db2_pm/ldapclog_pm.out
+db2 list history backup all for  LDAPCLOG >> db2_pm/ldapclog_pm.out
+
+echo "db2pd -db LDAPCLOG -locks:" >> db2_pm/ldapclog_pm.out
+db2pd -db LDAPCLOG -locks  >> db2_pm/ldapclog_pm.out
+
+echo "db2 get snapshot for all on  LDAPCLOG:" >> db2_pm/ldapclog_pm.out
+db2 get snapshot for all on  LDAPCLOG >> db2_pm/ldapclog_pm.out
+
+
+echo "db2 get snapshot for all on  LDAPCLOG:" >> db2_pm/ldapclog_pm.out
+db2 get dbm cfg >> db2_pm/ldapclog_pm.out
+
+echo "db2 get db cfg for LDAPCLOG:" >> db2_pm/ldapclog_pm.out
+db2 get db cfg for LDAPCLOG >> db2_pm/ldapclog_pm.out
+
+echo "GET DB SIZE:" >> db2_pm/ldapclog_pm.out
+db2 << EOF >> db2_pm/ldapclog_pm.out
+call get_dbsize_info(?,?,?,-1)
+list tablespaces show detail
+EOF
+echo "############################" >> db2_pm/ldapclog_pm.out
+
+
+echo "DB ====> ldapdb" > db2_pm/ldapdb_pm.out;
+db2pd -db  LDAPDB -tablespaces >> db2_pm/ldapdb_pm.out;
+
+echo "connect to LDAPDB:" >> db2_pm/ldapdb_pm.out;
+db2 connect to LDAPDB >> db2_pm/ldapdb_pm.out;
+
+echo "select max(stats_time) from syscat.tables:" >> db2_pm/ldapdb_pm.out;
+db2 "select max(stats_time) from syscat.tables" >> db2_pm/ldapdb_pm.out;
+
+echo "db2 list history reorg all for  LDAPDB:" >> db2_pm/ldapdb_pm.out;
+db2 list history reorg all for  LDAPDB >> db2_pm/ldapdb_pm.out;
+
+echo "db2 list history backup all for  LDAPDB:" >> db2_pm/ldapdb_pm.out;
+db2 list history backup all for  LDAPDB >> db2_pm/ldapdb_pm.out;
+
+echo "db2pd -db LDAPDB -locks:" >> db2_pm/ldapdb_pm.out;
+db2pd -db LDAPDB -locks >> db2_pm/ldapdb_pm.out;
+
+echo "db2 get snapshot for all on  LDAPDB:" >> db2_pm/ldapdb_pm.out;
+db2 get snapshot for all on  LDAPDB >> db2_pm/ldapdb_pm.out;
+
+echo "db2 get dbm cfg:" >> db2_pm/ldapdb_pm.out;
+db2 get dbm cfg >> db2_pm/ldapdb_pm.out;
+
+echo "db2 get db cfg for LDAPDB:" >> db2_pm/ldapdb_pm.out;
+db2 get db cfg for LDAPDB >> db2_pm/ldapdb_pm.out;
+
+echo "get db size:" >> db2_pm/ldapdb_pm.out;
+db2 << EOF >> db2_pm/ldapdb_pm.out;
+call get_dbsize_info(?,?,?,-1)
+list tablespaces show detail
+EOF
+
+
+echo "############################" >> db2_pm/ldapdb_pm.out;
+
+
+
+
+echo "############ timdb2 ########" >> db2_pm/timdb2_pm.out
+
+su - timdb2
+mkdir db2_pm
+
+echo "====> timdb2" >> db2_pm/timdb2_pm.out;
+uname -a >> db2_pm/timdb2_pm.out;
+
+echo "db2level: " >> db2_pm/timdb2_pm.out;
+db2level >> db2_pm/timdb2_pm.out;
+
+echo "db2mtrk -d -v: " >> db2_pm/timdb2_pm.out;
+db2mtrk -d -v >> db2_pm/timdb2_pm.out;
+
+echo "db2set: " >> db2_pm/timdb2_pm.out;
+db2set >> db2_pm/timdb2_pm.out;
+
+echo "db2 list db directory: " >> db2_pm/timdb2_pm.out;
+db2 list db directory >> db2_pm/timdb2_pm.out;
+
+echo "db2 list active databases: " >> db2_pm/timdb2_pm.out;
+db2 list active databases >> db2_pm/timdb2_pm.out;
+
+echo "db ====> timdb2" >> db2_pm/timdb2_pm.out;
+echo "db2pd -db  TIMDB2 -tablespaces:" >> db2_pm/timdb2_pm.out;
+db2pd -db  TIMDB2 -tablespaces >> db2_pm/timdb2_pm.out;
+
+echo "db2 connect to TIMDB2:" >> db2_pm/timdb2_pm.out;
+db2 connect to TIMDB2 >> db2_pm/timdb2_pm.out;
+
+echo "select max(stats_time) from syscat.tables:" >> db2_pm/timdb2_pm.out;
+db2 "select max(stats_time) from syscat.tables" >> db2_pm/timdb2_pm.out;
+
+echo "db2 list history reorg all for TIMDB2:" >> db2_pm/timdb2_pm.out;
+db2 list history reorg all for TIMDB2 >> db2_pm/timdb2_pm.out;
+
+echo "db2 list history backup all for TIMDB2:" >> db2_pm/timdb2_pm.out;
+db2 list history backup all for TIMDB2 >> db2_pm/timdb2_pm.out;
+
+echo "db2pd -db TIMDB2 -locks:" >> db2_pm/timdb2_pm.out;
+db2pd -db TIMDB2 -locks >> db2_pm/timdb2_pm.out;
+
+echo "db2 get snapshot for all on TIMDB2:" >> db2_pm/timdb2_pm.out;
+db2 get snapshot for all on TIMDB2 >> db2_pm/timdb2_pm.out;
+
+
+echo "db2 get dbm cfg:" >> db2_pm/timdb2_pm.out;
+db2 get dbm cfg >> db2_pm/timdb2_pm.out;
+
+
+echo "db2 get db cfg for TIMDB2:" >> db2_pm/timdb2_pm.out;
+db2 get db cfg for TIMDB2 >> db2_pm/timdb2_pm.out;
+
+echo "get db size:" >> db2_pm/timdb2_pm.out;
+db2 << EOF >> db2_pm/timdb2_pm.out;
+call get_dbsize_info(?,?,?,-1)
+list tablespaces show detail
+EOF
+
+
+echo "############################" >> db2_pm/timdb2_pm.out;
