@@ -242,12 +242,12 @@ FROM DBA_DATA_FILES ORDER BY 1;
 
 
 -- Check temp tablespace size
-col Total(M)  for 999,999,999;
+col TOTAL(M)  for 999,999,999;
 col FREE(M) for 999,999,999;
-col USED(MB) for 999,999,999;
+col USED(M) for 999,999,999;
 select tablespace_name,
-       (sum(bytes_used) + sum(bytes_free)) / 1048576 "TOTAL(MB)",
-       sum(bytes_used) / 1048576 "USED(MB)",
+       (sum(bytes_used) + sum(bytes_free)) / 1048576 "TOTAL(M)",
+       sum(bytes_used) / 1048576 "USED(M)",
        sum(bytes_free) / 1048576 "FREE(M)",
        sum(bytes_used) / (sum(bytes_used) + sum(bytes_free)) * 100 "Used rate(%)"
   from v$temp_space_header
@@ -261,7 +261,7 @@ select tablespace_name,
 set linesize 200;
 col tablespace_name for a20;
 col Total(M)  for 999,999,999;
-col USE(M) for 999,999,999;
+col USED(M) for 999,999,999;
 col FREE(M) for 999,999,999;
 SELECT D.TABLESPACE_NAME,
        SPACE "Total(M)",
