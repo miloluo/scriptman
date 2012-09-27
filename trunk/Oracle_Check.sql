@@ -12,6 +12,7 @@
 ---- v0.1.2 Add more contents for pm report and modify the order of sql queries (Milo) 
 ---- v0.1.3 Add backup info part (Jet)
 ---- v0.1.4 Add some columns(version, modified) in dba_registry (Milo)
+---- v0.1.5 Add Part 2.7 resource check (Milo)
 
 
 -- ##################################################################################
@@ -623,12 +624,23 @@ order by s.address,s.piece;
 -- ########################################################
 -- Part 2.6 Database RMAN Backup Information
 -- ########################################################
+
+-- Check Rman Backup info
 set linesize 200;
 col handle for a50;
 col comments for a15;
 alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
 select bs_key, bp_key, device_type, handle, tag,  deleted, status, start_time, completion_time, comments 
 from v$backup_piece_details;
+
+
+-- ########################################################
+-- Part 2.7 Some Resource Info
+-- ########################################################
+
+-- Check the resource limits
+set linesize 200;
+select * from v$resource_limit;
 
 
 -- ##################################################################################
