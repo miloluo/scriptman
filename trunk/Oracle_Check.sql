@@ -13,6 +13,11 @@
 ---- v0.1.3 Add backup info part (Jet)
 ---- v0.1.4 Add some columns(version, modified) in dba_registry (Milo)
 ---- v0.1.5 Add Part 2.7 resource check (Milo)
+----        Modify the v$log_history to latest 30 days history(Milo)
+---- V0.1.6 Add missing crs check contents(Milo)
+----        Add "tablespace cnt" alias for query(Milo)
+----        Move v$sga_resize_ops to Performance session(Milo)
+----        Remove datafile name check as datafile autoextend check already cover(Milo)
 
 
 -- ##################################################################################
@@ -109,14 +114,6 @@ col name for a35;
 col MB for 999,999,999;
 select name, round(bytes/1024/1024,3) "MB" from v$sgainfo;
 
--- Added from v0.1.1
--- Query sga auto resize action (Avaiable for 10g and above)
-
-set linesize 200;
-column component format a20;
-column parameter format a20;
-alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
-select  * from v$sga_resize_ops;
 
 
 -- Add from v0.1.2
@@ -222,15 +219,10 @@ select name from v$tempfile);
 
 -- Check tablespace count
 
-select count(*) from dba_tablespaces;
+select count(*) tablespace_cnt from dba_tablespaces;
 
 
 -- Check datafile type along with ls -l check
-
-SELECT name
-FROM   v$datafile;  
-
-
 -- Check if the files have autoextensiable attributes
  
 col tablespace_name for a20;
@@ -370,6 +362,7 @@ SELECT thread#,
        sequence#,
        first_time
 FROM   v$log_history
+where first_time > sysdate - 30
 ORDER  BY thread#, sequence#; 
 
 
@@ -620,6 +613,16 @@ where b.sid=sw.sid
 order by s.address,s.piece;
 
 
+-- Added from v0.1.1
+-- Query sga auto resize action (Avaiable for 10g and above)
+
+set linesize 200;
+column component format a20;
+column parameter format a20;
+alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
+select  * from v$sga_resize_ops;
+
+
 
 -- ########################################################
 -- Part 2.6 Database RMAN Backup Information
@@ -627,7 +630,9 @@ order by s.address,s.piece;
 
 -- Check Rman Backup info
 set linesize 200;
-col handle for a50;
+col device_type for a10;
+col handle for a20;
+col tag for a25;
 col comments for a15;
 alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
 select bs_key, bp_key, device_type, handle, tag,  deleted, status, start_time, completion_time, comments 
@@ -642,6 +647,14 @@ from v$backup_piece_details;
 set linesize 200;
 select * from v$resource_limit;
 
+
+
+-- #######################################################
+-- Last Part: check CRS_STAT
+-- #######################################################
+
+-- Check if there is crs in RAC ( double check )
+! crs_stat -t
 
 -- ##################################################################################
 
