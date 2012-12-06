@@ -1,0 +1,182 @@
+set pagesize 500
+set linesize 500
+SPOOL D:\郑州日产\数据库脚本\e3s\e3s.doc;
+prompt
+prompt |                       ORACLE 数据库性能检测报告
+set head off
+select '监测日期'||to_char(sysdate,'YYYY-MM-DD:HH24:MI:SS')||'    监测人：李杰' "      监测明细如下：" from dual;
+prompt 
+prompt 数据库信息
+SELECT DATABASE_NAME,INSTANCE_NAME,STATUS FROM GV$INSTANCE;
+
+prompt 内存分配信息
+ select a.name "SGA信息",to_char(a.value/1024) "分配大小K",b.name "PGA信息",to_char(b.value/1024) "分配大小K" 
+  from v$parameter a,v$parameter b
+ where a.name='sga_max_size'
+   and b.name='pga_aggregate_target';
+
+
+prompt 
+set head on
+set pagesize 500;
+
+prompt
+prompt ==================================
+prompt 初始化资源情况
+prompt ==================================
+ select substr(resource_name,1,12) "资源",substr(initial_allocation,1,8) "初始值",substr(max_utilization,1,8) "最大值",substr(limit_value,1,8) "限值"
+from v$resource_limit;
+
+prompt
+prompt ==================================
+prompt 检查表空间
+prompt ==================================
+select 
+      a.tablespace_name "表空间名",a.total "表空间总量",
+      b.free "剩余空间大小M" ,
+      ceil((1-b.free/a.total)*100) "表空间使用率%", 
+      c.extent_management "管理模式"
+from 
+  (select 
+         tablespace_name, 
+         sum(nvl(bytes,0))/1024/1024 total 
+    from 
+         dba_data_files 
+    group by tablespace_name
+   ) a,
+  (select 
+      tablespace_name, 
+      sum(nvl(bytes,0))/1024/1024 free 
+   from 
+       dba_free_space 
+   group by tablespace_name
+   ) b ,
+   dba_tablespaces c
+where
+    a.tablespace_name=b.tablespace_name 
+and a.tablespace_name=c.tablespace_name
+    order by (1-b.free/a.total)*100 desc
+/
+
+prompt ==================================
+prompt 检查用户
+prompt ==================================   
+
+select 	SUBSTR(username,1,12)   "用户名", 
+	SUBSTR(default_tablespace,1,12) "默认表空间", 	
+	SUBSTR(granted_role,1,14) "角色"
+from dba_users u,dba_role_privs r
+where u.username = r.grantee
+and default_tablespace not in ('SYSTEM','SYSAUX')
+order by username
+/
+prompt
+prompt ==================================
+prompt 检查禁用的触发器
+prompt ================================== 
+prompt
+SELECT owner "用户名",trigger_name "触发器名称",status "状态" FROM dba_triggers where status = 'DISABLED';
+
+prompt
+prompt ==================================
+prompt 检查禁用的约束
+prompt ================================== 
+prompt
+SELECT owner "用户名",constraint_name,decode(constraint_type,'P','主键','F','外键',constraint_type) "约束类型",status "状态"
+  FROM dba_constraints where status = 'DISABLED';
+
+prompt
+prompt ==================================
+prompt 检查无效索引
+prompt ================================== 
+prompt
+SELECT owner "用户名",index_name "名称",status "状态" FROM dba_indexes where status = 'UNUSABLE';
+prompt
+prompt ==================================
+PROMPT 最消耗内存的十个SQL
+prompt ================================== 
+select * from (
+    select trunc(t.BUFFER_GETS/t.EXECUTIONS) "占用内存",
+    t.EXECUTIONS "执行次数",t.SQL_TEXT "执行明细"
+    from v$sql t  where t.EXECUTIONS > 0     order by 1 desc )
+where rownum <= 10;
+prompt
+prompt ==================================
+PROMPT 最消耗内存的5个等待
+prompt ================================== 
+prompt
+
+select  EVENT "事件",TIME_WAITED "等待时间"  from (
+select  EVENT ,TOTAL_WAITS , TOTAL_TIMEOUTS , TIME_WAITED from v$system_event where event not like  '%rdbms%' and event not like '%message%' and event not like 'SQL*Net%' order by total_waits desc
+)
+where rownum <=5	 ;
+
+prompt
+prompt ==================================
+PROMPT 检查命中率
+prompt ================================== 
+prompt
+select * from 
+(SELECT 1 - (phy.value-phyd.value)/( (cur.value + con.value-phyd.value)) "数据缓冲区命中率" 
+   FROM v$sysstat cur, v$sysstat con, v$sysstat phy,v$sysstat phyd
+  WHERE cur.name = 'db block gets' AND con.name = 'consistent gets'
+    AND phy.name = 'physical reads' and phyd.NAME = 'physical reads direct' ),
+(select sum(pinhits)/sum(pins) "SQL共享池命中率" from v$librarycache) ,
+(select 1-SUM(GETMISSES)/SUM(GETS) "数据字典命中率" from V$ROWCACHE)
+;
+prompt
+prompt ==================================
+PROMPT 检查用户所占用的表空间
+prompt ================================== 
+prompt
+
+ select nvl(t.owner,'合计：') "用户名",
+       to_char(sum(bytes)/(1024*1024),'999,999,999,999,999') "占用的空间(M字节)"
+  from dba_segments  t
+ group by rollup(t.owner)
+ order by 2  ;
+ prompt
+prompt ==================================
+PROMPT 检查对象所占用的空间大小（超过500M）
+prompt ================================== 
+prompt
+ select SUBSTR(t.owner||'.'||segment_name,1,30) "对象名",
+       round(sum(bytes)/(1024*1024),2) "占用的空间(M字节)"
+ from dba_segments  t
+ group by t.owner||'.'||segment_name
+ having round(sum(bytes)/(1024*1024),2)>500
+ order by 2 desc  ;
+prompt
+prompt ==================================
+PROMPT 检查无效JOB
+prompt ================================== 
+
+ select JOB "作业ID" ,PRIV_USER "用户",WHAT "作业内容" from dba_jobs where broken='Y' or failures>0;
+
+prompt
+prompt ================================== 
+prompt 当前没有执行而且下一执行日期已经过去的预定作业)
+prompt ==================================
+prompt
+
+select * from dba_jobs where broken='N' and next_date<sysdate and
+                             job not in (select job from dba_jobs_running);
+prompt
+prompt ================================== 
+select '检查日期'||to_char(sysdate,'YYYY-MM-DD')
+prompt ==================================
+prompt
+
+Select  SESSION_KEY, INPUT_TYPE, STATUS, to_char(START_TIME,'mm/dd/yy hh24:mi') start_time, to_char(END_TIME,'mm/dd/yy hh24:mi') end_time, OUTPUT_BYTES_PER_SEC_DISPLAY outs, elapsed_seconds/3600                   hrs from V$RMAN_BACKUP_JOB_DETAILS where START_TIME=SYSDATE  order by session_key 
+
+prompt
+
+---系统响应时间
+select METRIC_NAME,VALUE
+    from V_$SYSMETRIC
+    where METRIC_NAME IN ('Database CPU Time Ratio','Database Wait Time Ratio')
+    AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC);
+ 
+
+SPOOL OFF;
+exit;
