@@ -15,7 +15,7 @@ SWAPINFO=/usr/sbin/swapinfo
 VGDISPLAY=/usr/sbin/vgdisplay
 IOSCAN=/usr/sbin/ioscan
 SHOW_PATCHES=/usr/contrib/bin/show_patches
-TEST=adflajflaj
+#TEST=adflajflaj
 ############################
 
 CMDLIST="$MACHINFO $UNAME $UPTIME $TOP $ULIMIT $VMSTAT $IOSTAT $LANSCAN $BDF $SWAPINFO $VGDISPLAY $IOSCAN $SHOW_PATCHES $TEST"

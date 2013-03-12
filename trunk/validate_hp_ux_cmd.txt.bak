@@ -18,40 +18,27 @@ SHOW_PATCHES=/usr/contrib/bin/show_patches
 TEST=adflajflaj
 ############################
 
-CMDLIST='$MACHINFO $UNAME $UPTIME $TOP $ULIMIT $VMSTAT $IOSTAT $LANSCAN $BDF $SWAPINFO $VGDISPLAY $IOSCAN $SHOW_PATCHES'
-CMDLIST1='$MACHINFO $TEST'
+CMDLIST="$MACHINFO $UNAME $UPTIME $TOP $ULIMIT $VMSTAT $IOSTAT $LANSCAN $BDF $SWAPINFO $VGDISPLAY $IOSCAN $SHOW_PATCHES $TEST"
 
 
 ##### Validate commands ####
 echo "Validating the OS command..."
 
-for c in $CMDLIST1
+##### for special case command ###
+for c in $CMDLIST
+do
+if  echo $c | grep top  >/dev/null 2>&1
+then
+  c=$c" -d 1"
+elif  ! echo $c grep ioscan >/dev/null 2>&1
+then
+  c=$c" 1 1"
+fi
+
+#### real test ####
 $c > /dev/null 2>&1
 if [ `echo $?` -gt 0 ]
 then
    echo "$c is not working, please check!" | tee cmd_err.log
-   sleep 3
 fi
-
-sleep 10;
-
-
-##### Execute those commands ####
-
-ksh -c "$MACHINFO">>/tmp/aticheck/11.txt
-ksh -c "$UNAME -a">>/tmp/aticheck/11.txt
-ksh -c "$UPTIEM">>/tmp/aticheck/11.txt
-ksh -c "$TOP -s 1 -d 1 -n 40">>/tmp/aticheck/11.txt
-ksh -c "$ULIMIT -a">>/tmp/aticheck/11.txt
-ksh -c "$VMSTAT 2 5">>/tmp/aticheck/11.txt
-ksh -c "$IOSTAT 2 5">>/tmp/aticheck/11.txt
-ksh -c "$LANSCAN -i | cut -d\" \" -f1 | xargs -n1 /usr/sbin/ifconfig">>/tmp/aticheck/11.txt
-ksh -c "$NETSTAT -in">>/tmp/aticheck/11.txt
-ksh -c "$NETSTAT -rn">>/tmp/aticheck/11.txt
-ksh -c "$BDF">>/tmp/aticheck/11.txt
-ksh -c "$SWAPINFO -tm">>/tmp/aticheck/11.txt
-ksh -c "$VGDISPLAY -v">>/tmp/aticheck/11.txt
-ksh -c "$IOSCAN -fnkC processor">>/tmp/aticheck/11.txt
-ksh -c "$SHOW_PATCHES">>/tmp/aticheck/11.txt
-ksh -c "cat /etc/hosts">>/tmp/aticheck/11.txt
-ksh -c "tail -1000 /var/adm/syslog/syslog.log">>/tmp/aticheck/11.txt
+done;
