@@ -1,0 +1,337 @@
+--1. 查询锁的信息：
+set linesize 200;
+col user_name for a20;
+col owner for a15;
+col object_name for a30;
+col object_type for a15;
+col sid for 99999;
+col serial# for 99999;
+
+-- 单实例查lock的信息
+select lpad(' ', decode(l.xidusn, 0, 3, 0)) || l.oracle_username user_name,
+       o.owner, o.object_name, o.object_type, s.sid, s.serial#
+from   v$locked_object l, dba_objects o, v$session s
+where l.object_id=o.object_id and l.session_id=s.sid
+order by o.object_id, xidusn desc;
+
+
+
+-- 整个RAC范围内查lock信息
+set linesize 200;
+col user_name for a20;
+col owner for a15;
+col object_name for a30;
+col object_type for a15;
+col sid for 99999;
+col serial# for 99999;
+col inst_id for 999;
+select s.inst_id, s.sid, s.serial#, lpad('-> ', decode(l.xidusn, 0, 3, 0)) || l.oracle_username user_name,
+       o.owner, o.object_name, o.object_type
+from   gv$locked_object l, dba_objects o, gv$session s
+where l.object_id=o.object_id and l.session_id=s.sid
+order by o.object_id, xidusn desc;
+
+
+--2. 查询回话执行sql
+
+SET VERIFY OFF
+SET LINESIZE 255
+COL SID FORMAT 99999999
+COL STATUS FORMAT A8
+COL PROCESS FORMAT A10
+COL SCHEMANAME FORMAT A16
+COL OSUSER  FORMAT A16
+COL SQL_TEXT FORMAT A60 HEADING 'SQL QUERY'
+COL PROGRAM FORMAT A30
+
+SELECT s.sid,
+       s.status,
+       s.process,
+       s.schemaname,
+       a.sql_id,
+       a.sql_text,
+       p.program
+FROM   v$session s,
+       v$sqlarea a,
+       v$process p
+WHERE  s.SQL_HASH_VALUE = a.HASH_VALUE
+AND    s.SQL_ADDRESS = a.ADDRESS
+AND    s.PADDR = p.ADDR and s.sid = &sid;
+
+SET VERIFY ON
+SET LINESIZE 255
+
+
+
+-- 通过sid，查会话信息，包括在执行的sql
+SELECT s.sid,
+       s.status,
+       s.process,
+       s.schemaname,
+       s.osuser,
+       a.sql_id,
+       a.sql_text,
+       p.program
+FROM   v$session s,
+       v$sqlarea a,
+       v$process p
+WHERE  s.SQL_HASH_VALUE = a.HASH_VALUE
+AND    s.SQL_ADDRESS = a.ADDRESS
+AND    s.PADDR = p.ADDR
+and    s.sid =&sid;
+
+
+
+
+
+--3. spid, pid的转换查询
+
+col event for a40;
+select sid || ',' ||serial# as sid_ser#, username, machine, program, event, row_wait_obj#
+from v$session 
+where paddr in (select addr from v$process where spid = &ospid);
+
+
+col sid_ser# for a15;
+col machine for a20;
+col program for a30;
+col event for a40;
+select sid || serial# as sid_ser#, username, machine, program, event, row_wait_obj#
+from v$session 
+where paddr in (select addr from v$process where pid = &orapid);
+
+
+--4. kill回话前需要查询的信息：
+set linesize 200;
+col sid_ser# for a20;
+col username for a15;
+col program for a40;
+col machine for a40;
+select s.sid || ',' ||s.serial# as sid_ser#,p.spid as ospid, s.username, s.machine, s.program
+from v$session s, v$process p
+where p.addr=s.paddr and s.sid =  &sid;
+
+/*
+查询第1步中的锁的信息情况。
+查询第2步中的信息，核对回话执行的sql。
+
+alter system kill session '';
+*/
+
+
+
+--5. sql历史执行计划
+
+-- sql所产生的历史执行计划
+select distinct SQL_ID,PLAN_HASH_VALUE,to_char(TIMESTAMP,'yyyy-mm-dd hh24:mi:ss')  TIMESTAMP
+from dba_hist_sql_plan 
+where SQL_ID='&sql_id' 
+order by TIMESTAMP;
+
+-- 这些执行计划的具体内容
+col options for a15;
+col operation for a20;
+col object_name for a25;
+col timestamp for a20;
+select plan_hash_value,id,operation,options,object_name,depth,cost,to_char(TIMESTAMP,'yyyy-mm-dd hh24:mi:ss') TIMESTAMP
+    from DBA_HIST_SQL_PLAN  
+    where sql_id ='42qrzspdntuqv' 
+    and plan_hash_value in ('1658301718','687963076')
+    order by  plan_hash_value,ID,TIMESTAMP;
+
+
+
+--6. 收集表的统计信息：
+exec dbms_stats.gather_table_stats(ownname => 'DBCUSTADM', tabname => 'WCHG201212');
+exec dbms_stats.gather_table_stats(ownname => 'DBCUSTADM', tabname => 'WLOGINOPR201212');
+
+
+select owner, table_name, num_rows, to_char(last_analyzed,'yyyy-mm-dd hh24:mi:ss') last_analyzed , stale_stats 
+from dba_tab_statistics 
+where table_name in ('WCHG201212','WLOGINOPR201212');
+
+
+-- 查询那些表的统计信息可能过期了的(非实时)
+select owner || '.' || table_name, num_rows, last_analyzed, stale_stats from dba_tab_statistics 
+where stale_stats='YES' and table_name not like 'BIN$%' and owner not in ('SYS', 'SYSTEM');
+
+
+
+-- 查询分区表的分区信息
+set linesize 200;
+col last_analyzed for a20;
+select table_owner, table_name, partition_name, num_rows, 
+       to_char(last_analyzed, 'yyyy-mm-dd hh24:mi:ss') last_analyzed 
+from dba_tab_partitions
+where table_name in  ('WLOGINOPR201301','WCHG201301')
+order by table_name,partition_name ;
+
+
+--7. 会话等待事件
+
+-- 非空闲等待事件
+col seq# for 99999999;
+col username for a15;
+col machine for a15;
+col program for a20;
+col event for a30;
+col p1text for a10;
+col p2text for a10;
+col p3text for a10;
+select s.sid,s.seq#, s.username, sw.event, s.machine, s.program,  sw.p1text,sw.p1,sw.p2text,sw.p2,sw.p3text,sw.p3
+from v$session_wait sw, v$session s
+where sw.SID = s.SID and
+      s.username is not null and
+      sw.event not like '%SQL%'and
+      sw.event not like '%rdbms%'
+      order by event;
+      
+
+-- 非空闲正在等待的时间(整个RAC)      
+set linesize 200;
+col event for a30;      
+select inst_id, sid, serial#, program, event, p1, p2, p3, count(*) from  gv$session s
+where
+event not like '%SQL%'and event not like '%rdbms%' and state='WAITING'
+group by inst_id, sid, serial#, program, event, p1, p2,p3
+order by event,inst_id;
+
+
+-- 会话等待事件历史
+set linesize 200;
+col SAMPLE_TIME for a20;
+alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
+select sample_time, sql_id, event, current_obj#
+  from gv$active_session_history
+where sample_time between
+       to_date('01-JAN-2013 00:55:00', 'DD-MON-YYYY HH24:MI:SS') and
+       to_date('01-JAN-2013 01:03:00', 'DD-MON-YYYY HH24:MI:SS')
+   and event like '%gc buffer busy%'    -------------------------------------> 等待事件
+group by sample_time, sql_id, event, current_obj#
+order by sample_time, sql_id;      
+
+
+      
+--8. 统计信息
+
+-- 自动收集统计信息的job状态
+set linesize 200;
+col last_run_duration for a30;
+col last_start_date for a20;
+col owner for a10;
+col job_name for a20;
+
+SELECT owner,job_name,state, TO_CHAR (last_start_date, 'DD-MON-YYYY HH24:MI') last_start_date,
+       TO_CHAR (last_run_duration, 'DD-MON-YYYY HH24:MI')  last_run_duration, failure_count
+FROM   dba_scheduler_jobs 
+WHERE job_name = 'GATHER_STATS_JOB';
+
+
+SELECT JOB_NAME, SCHEDULE_NAME, SCHEDULE_TYPE, ENABLED
+FROM DBA_SCHEDULER_JOBS
+WHERE PROGRAM_NAME = 'GATHER_STATS_PROG';
+
+
+-- 统计信息运行细节
+set linesize 200;
+col ADDITIONAL_INFO for a65;
+col status for a10;
+col LOG_DATE for a20;
+SELECT log_id, job_name, status,
+           TO_CHAR (log_date, 'DD-MON-YYYY HH24:MI') log_date, ADDITIONAL_INFO
+FROM dba_scheduler_job_run_details
+WHERE job_name = 'GATHER_STATS_JOB'
+order by log_date;
+
+
+-- 窗口时间定义信息
+
+set linesize 200;
+col repeat_interval for a80;
+col duration for a20;
+select t1.window_name,t1.repeat_interval,t1.duration 
+from dba_scheduler_windows t1,dba_scheduler_wingroup_members t2
+where t1.window_name=t2.window_name and 
+      t2.window_group_name='MAINTENANCE_WINDOW_GROUP';
+
+
+-- 11g job的基本信息
+col comments for a50;
+SELECT JOB_NAME, SCHEDULE_NAME, SCHEDULE_TYPE, ENABLED, comments from DBA_SCHEDULER_JOBS;
+
+/* 结果展示
+JOB_NAME                       SCHEDULE_NAME                  SCHEDULE_TYPE        ENABL COMMENTS
+------------------------------ ------------------------------ -------------------- ----- --------------------------------------------------
+XMLDB_NFS_CLEANUP_JOB                                         CALENDAR             FALSE
+SM$CLEAN_AUTO_SPLIT_MERGE                                     CALENDAR             TRUE  auto clean job for auto split merge
+RSE$CLEAN_RECOVERABLE_SCRIPT                                  CALENDAR             TRUE  auto clean job for recoverable script
+FGR$AUTOPURGE_JOB                                             CALENDAR             FALSE file group auto-purge job
+BSLN_MAINTAIN_STATS_JOB        BSLN_MAINTAIN_STATS_SCHED      NAMED                TRUE  Oracle defined automatic moving window baseline st
+                                                                                         atistics computation job
+
+DRA_REEVALUATE_OPEN_FAILURES   MAINTENANCE_WINDOW_GROUP       WINDOW_GROUP         TRUE  Reevaluate open failures for DRA
+HM_CREATE_OFFLINE_DICTIONARY   MAINTENANCE_WINDOW_GROUP       WINDOW_GROUP         FALSE Create offline dictionary in ADR for DRA name tran
+                                                                                         slation
+
+
+JOB_NAME                       SCHEDULE_NAME                  SCHEDULE_TYPE        ENABL COMMENTS
+------------------------------ ------------------------------ -------------------- ----- --------------------------------------------------
+ORA$AUTOTASK_CLEAN             DAILY_PURGE_SCHEDULE           NAMED                TRUE  Delete obsolete AUTOTASK repository data
+FILE_WATCHER                   FILE_WATCHER_SCHEDULE          NAMED                FALSE File watcher job
+PURGE_LOG                      DAILY_PURGE_SCHEDULE           NAMED                TRUE  purge log job
+MGMT_STATS_CONFIG_JOB                                         CALENDAR             TRUE  OCM Statistics collection job.
+MGMT_CONFIG_JOB                MAINTENANCE_WINDOW_GROUP       WINDOW_GROUP         TRUE  Configuration collection job.
+RLM$SCHDNEGACTION                                             CALENDAR             TRUE
+RLM$EVTCLEANUP                                                CALENDAR             TRUE
+*/
+
+-- 11g job的是否激活
+SELECT JOB_NAME, STATE FROM DBA_SCHEDULER_JOBS;
+
+
+-- 11g查看自动收集统计信息的细节
+set linesize 200;
+col job_name for a30;
+col ADDITIONAL_INFO for a30;
+SELECT to_char(log_date, 'DD-MON-YY HH24:MI:SS') TIMESTAMP, job_name, status,
+   SUBSTR(additional_info, 1, 40) ADDITIONAL_INFO
+FROM dba_scheduler_job_run_details 
+WHERE job_name='BSLN_MAINTAIN_STATS_JOB'
+ORDER BY log_date;
+
+
+
+
+--9. active session wait
+
+set linesize 200;
+col SAMPLE_TIME for a20;
+alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
+select sample_time, sql_id, event, current_obj#
+  from gv$active_session_history
+where sample_time between
+       to_date('01-FEB-2013 00:10:00', 'DD-MON-YYYY HH24:MI:SS') and
+       to_date('01-FEB-2013 01:40:00', 'DD-MON-YYYY HH24:MI:SS')
+   and event like '%row cache%' 
+group by sample_time, sql_id, event, current_obj#
+order by sample_time, sql_id;
+
+
+select PARAMETER ,COUNT ,GETS ,GETMISSES ,MODIFICATIONS from v$rowcache where cache#；
+
+
+--10. 硬解析情况
+select substr(SQL_TEXT,1,80),count(*) from v$sqlarea 
+group by substr(SQL_TEXT,1,80) 
+order by 2 desc;
+
+select sql_id, sql_text, executions from v$sqlarea 
+where sql_text like '%SELECT "A1"."LOGIN_NO" FROM "DBCUSTADM"."DLOGINMSG" "A1" WHERE "A1"."GROUP_ID"=A%'
+order by sql_text, executions;
+
+selet * from (
+select substr(SQL_TEXT,1,80),count(*) from v$sqlarea 
+group by substr(SQL_TEXT,1,80) 
+order by 2 desc )
+where rownum <=10;
+

@@ -1,0 +1,245 @@
+ASM Disk header备份
+
+KFED – Kernel Files Editor
+
+disk1=/dev/asm-diske
+disk2=/dev/asm-diskf
+disk3=/dev/asm-diskg
+disk4=/dev/asm-diskh
+disk5=/dev/asm-gi-diskb
+disk6=/dev/asm-gi-diskc
+disk7=/dev/asm-gi-diskd
+
+
+for i in 1..7
+do
+ausize=`kfed read  disk$i | grep ausize | tr -s ' ' | cut -d' ' -f2`
+blksize=`kfed read disk$i | grep blksize | tr -s ' ' | cut -d' ' -f2`
+let n=$ausize/$blksize-2
+echo $n
+
+kfed read disk$i aun=1 blkn=$n > disk$i.kfed
+
+done
+
+
+
+
+========================
+
+
+ausize=`kfed read /dev/asm-diske  | grep ausize | tr -s ' ' | cut -d' ' -f2`
+blksize=`kfed read /dev/asm-diske | grep blksize | tr -s ' ' | cut -d' ' -f2`
+let n=$ausize/$blksize-2
+echo $n
+kfed read /dev/asm-diske aun=1 blkn=$n > disk1.kfed
+
+
+
+
+ausize=`kfed read /dev/asm-diskf  | grep ausize | tr -s ' ' | cut -d' ' -f2`
+blksize=`kfed read /dev/asm-diskf | grep blksize | tr -s ' ' | cut -d' ' -f2`
+let n=$ausize/$blksize-2
+echo $n
+kfed read /dev/asm-diskf aun=1 blkn=$n > disk2.kfed
+
+ausize=`kfed read /dev/asm-gi-diskb  | grep ausize | tr -s ' ' | cut -d' ' -f2`
+blksize=`kfed read /dev/asm-gi-diskb | grep blksize | tr -s ' ' | cut -d' ' -f2`
+let n=$ausize/$blksize-2
+echo $n
+kfed read /dev/asm-gi-diskb aun=1 blkn=$n > disk3.kfed
+
+
+ausize=`kfed read /dev/asm-gi-diskc  | grep ausize | tr -s ' ' | cut -d' ' -f2`
+blksize=`kfed read /dev/asm-gi-diskc | grep blksize | tr -s ' ' | cut -d' ' -f2`
+let n=$ausize/$blksize-2
+echo $n
+kfed read /dev/asm-gi-diskc aun=1 blkn=$n > disk4.kfed
+
+
+ausize=`kfed read /dev/asm-gi-diskd  | grep ausize | tr -s ' ' | cut -d' ' -f2`
+blksize=`kfed read /dev/asm-gi-diskd | grep blksize | tr -s ' ' | cut -d' ' -f2`
+let n=$ausize/$blksize-2
+echo $n
+kfed read /dev/asm-gi-diskd aun=1 blkn=$n > disk5.kfed
+
+
+ausize=`kfed read /dev/asm-diskg  | grep ausize | tr -s ' ' | cut -d' ' -f2`
+blksize=`kfed read /dev/asm-diskg | grep blksize | tr -s ' ' | cut -d' ' -f2`
+let n=$ausize/$blksize-2
+echo $n
+kfed read /dev/asm-diskg aun=1 blkn=$n > disk6.kfed
+
+
+ausize=`kfed read /dev/asm-diskh  | grep ausize | tr -s ' ' | cut -d' ' -f2`
+blksize=`kfed read /dev/asm-diskh | grep blksize | tr -s ' ' | cut -d' ' -f2`
+let n=$ausize/$blksize-2
+echo $n
+kfed read /dev/asm-diskh aun=1 blkn=$n > disk7.kfed
+
+
+
+
++=============================================================
+
+
+SQL> select name, total_mb, free_mb, state from v$asm_disk;
+select name, total_mb, free_mb, state from v$asm_disk
+                                           *
+ERROR at line 1:
+ORA-15130: diskgroup "DG_DATA" is being dismounted
+ORA-15066: offlining disk "DG_DATA_0000" in group "DG_DATA" may result in a
+data loss
+ORA-15196: invalid ASM block header [kfc.c:26076] [endian_kfbh] [1] [8] [0 !=
+1]
+ORA-15196: invalid ASM block header [kfc.c:26076] [endian_kfbh] [1] [8] [0 !=
+1]
+
+
+SQL> exit
+
+
+select name, state from v$asm_diskgroup;
+col path for a40;
+select name, path, state from v$asm_disk;
+
+
+kfed merge /dev/asm-diske text=disk1.kfed 
+
+
+
+
+
+[grid@rac11g-2 ~]$ srvctl stop diskgroup -g dg_data
+[grid@rac11g-2 ~]$ crs_stat -t
+Name           Type           Target    State     Host        
+------------------------------------------------------------
+ora.DG_DATA.dg ora....up.type OFFLINE   OFFLINE               
+ora.DG_GI.dg   ora....up.type ONLINE    ONLINE    rac11g-1    
+ora....ER.lsnr ora....er.type ONLINE    ONLINE    rac11g-1    
+ora....N1.lsnr ora....er.type ONLINE    ONLINE    rac11g-1    
+ora.asm        ora.asm.type   ONLINE    ONLINE    rac11g-1    
+ora.cvu        ora.cvu.type   ONLINE    ONLINE    rac11g-1    
+ora.gsd        ora.gsd.type   OFFLINE   OFFLINE               
+ora....network ora....rk.type ONLINE    ONLINE    rac11g-1    
+ora.oc4j       ora.oc4j.type  ONLINE    ONLINE    rac11g-1    
+ora.ons        ora.ons.type   ONLINE    ONLINE    rac11g-1    
+ora....SM1.asm application    ONLINE    ONLINE    rac11g-1    
+ora....-1.lsnr application    ONLINE    ONLINE    rac11g-1    
+ora....g-1.gsd application    OFFLINE   OFFLINE               
+ora....g-1.ons application    ONLINE    ONLINE    rac11g-1    
+ora....g-1.vip ora....t1.type ONLINE    ONLINE    rac11g-1    
+ora....SM2.asm application    ONLINE    ONLINE    rac11g-2    
+ora....-2.lsnr application    ONLINE    ONLINE    rac11g-2    
+ora....g-2.gsd application    OFFLINE   OFFLINE               
+ora....g-2.ons application    ONLINE    ONLINE    rac11g-2    
+ora....g-2.vip ora....t1.type ONLINE    ONLINE    rac11g-2    
+ora.racdb.db   ora....se.type OFFLINE   OFFLINE               
+ora....ry.acfs ora....fs.type ONLINE    ONLINE    rac11g-1    
+ora.scan1.vip  ora....ip.type ONLINE    ONLINE    rac11g-1    
+[grid@rac11g-2 ~]$ srvctl start diskgroup -g dg_data
+PRCR-1079 : Failed to start resource ora.DG_DATA.dg
+CRS-5017: The resource action "ora.DG_DATA.dg start" encountered the following error: 
+ORA-15032: not all alterations performed
+ORA-15017: diskgroup "DG_DATA" cannot be mounted
+ORA-15063: ASM discovered an insufficient number of disks for diskgroup "DG_DATA"
+. For details refer to "(:CLSN00107:)" in "/u01/app/11.2.0/grid/log/rac11g-2/agent/crsd/oraagent_grid/oraagent_grid.log".
+
+CRS-2674: Start of 'ora.DG_DATA.dg' on 'rac11g-2' failed
+CRS-5017: The resource action "ora.DG_DATA.dg start" encountered the following error: 
+ORA-15032: not all alterations performed
+ORA-15017: diskgroup "DG_DATA" cannot be mounted
+ORA-15063: ASM discovered an insufficient number of disks for diskgroup "DG_DATA"
+. For details refer to "(:CLSN00107:)" in "/u01/app/11.2.0/grid/log/rac11g-1/agent/crsd/oraagent_grid/oraagent_grid.log".
+
+CRS-2674: Start of 'ora.DG_DATA.dg' on 'rac11g-1' failed
+
+SQL>/          
+
+NAME                           STATE
+------------------------------ -----------
+DG_DATA                        DISMOUNTED
+DG_GI                          MOUNTED
+
+
+
+
+当前的disk header
+
+[grid@rac11g-1 asmdh_bak]$ kfed read /dev/asm-diske aun=0 blkn=0 | more
+kfbh.endian:                          0 ; 0x000: 0x00
+kfbh.hard:                            0 ; 0x001: 0x00
+kfbh.type:                            0 ; 0x002: KFBTYP_INVALID
+kfbh.datfmt:                          0 ; 0x003: 0x00
+kfbh.block.blk:                       0 ; 0x004: blk=0
+kfbh.block.obj:                       0 ; 0x008: file=0
+kfbh.check:                           0 ; 0x00c: 0x00000000
+kfbh.fcn.base:                        0 ; 0x010: 0x00000000
+kfbh.fcn.wrap:                        0 ; 0x014: 0x00000000
+kfbh.spare1:                          0 ; 0x018: 0x00000000
+kfbh.spare2:                          0 ; 0x01c: 0x00000000
+2B85E59E0400 00000000 00000000 00000000 00000000  [................]
+  Repeat 255 times
+KFED-00322: Invalid content encountered during block traversal: [kfbtTraverseBlock][Invalid OSM block type][][0]
+
+
+
+
+[grid@rac11g-1 asmdh_bak]$ kfed merge /dev/asm-diske text=disk1.kfed 
+[grid@rac11g-1 asmdh_bak]$ kfed read /dev/asm-diske aun=0 blkn=0 | more
+kfbh.endian:                          1 ; 0x000: 0x01
+kfbh.hard:                          130 ; 0x001: 0x82
+kfbh.type:                            1 ; 0x002: KFBTYP_DISKHEAD
+kfbh.datfmt:                          1 ; 0x003: 0x01
+kfbh.block.blk:                     254 ; 0x004: blk=254
+kfbh.block.obj:              2147483648 ; 0x008: disk=0
+kfbh.check:                  1667284194 ; 0x00c: 0x6360bce2
+kfbh.fcn.base:                        0 ; 0x010: 0x00000000
+kfbh.fcn.wrap:                        0 ; 0x014: 0x00000000
+kfbh.spare1:                          0 ; 0x018: 0x00000000
+kfbh.spare2:                          0 ; 0x01c: 0x00000000
+kfdhdb.driver.provstr:         ORCLDISK ; 0x000: length=8
+kfdhdb.driver.reserved[0]:            0 ; 0x008: 0x00000000
+kfdhdb.driver.reserved[1]:            0 ; 0x00c: 0x00000000
+kfdhdb.driver.reserved[2]:            0 ; 0x010: 0x00000000
+kfdhdb.driver.reserved[3]:            0 ; 0x014: 0x00000000
+kfdhdb.driver.reserved[4]:            0 ; 0x018: 0x00000000
+kfdhdb.driver.reserved[5]:            0 ; 0x01c: 0x00000000
+kfdhdb.compat:                186646528 ; 0x020: 0x0b200000
+kfdhdb.dsknum:                        0 ; 0x024: 0x0000
+kfdhdb.grptyp:                        1 ; 0x026: KFDGTP_EXTERNAL
+kfdhdb.hdrsts:                        3 ; 0x027: KFDHDR_MEMBER
+kfdhdb.dskname:            DG_DATA_0000 ; 0x028: length=12
+kfdhdb.grpname:                 DG_DATA ; 0x048: length=7
+kfdhdb.fgname:             DG_DATA_0000 ; 0x068: length=12
+kfdhdb.capname:                         ; 0x088: length=0
+kfdhdb.crestmp.hi:             32982160 ; 0x0a8: HOUR=0x10 DAYS=0x4 MNTH=0x1 YEAR=0x7dd
+kfdhdb.crestmp.lo:           2985454592 ; 0x0ac: USEC=0x0 MSEC=0x9b SECS=0x1f MINS=0x2c
+kfdhdb.mntstmp.hi:             32982160 ; 0x0b0: HOUR=0x10 DAYS=0x4 MNTH=0x1 YEAR=0x7dd
+kfdhdb.mntstmp.lo:           2998662144 ; 0x0b4: USEC=0x0 MSEC=0x2fd SECS=0x2b MINS=0x2c
+kfdhdb.secsize:                     512 ; 0x0b8: 0x0200
+kfdhdb.blksize:                    4096 ; 0x0ba: 0x1000
+kfdhdb.ausize:                  1048576 ; 0x0bc: 0x00100000
+kfdhdb.mfact:                    113792 ; 0x0c0: 0x0001bc80
+kfdhdb.dsksize:                    1024 ; 0x0c4: 0x00000400
+
+
+
+
+
+SQL> /
+
+NAME                           STATE
+------------------------------ -----------
+DG_DATA                        DISMOUNTED
+DG_GI                          MOUNTED
+
+SQL> alter diskgroup dg_data mount;
+
+Diskgroup altered.
+
+SQL> exit
+
+
+
+

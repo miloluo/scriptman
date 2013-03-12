@@ -1,0 +1,19 @@
+set linesize 200;
+col property_name for a40;
+col property_value for a30;
+col description for a40;                     
+select property_name, property_value, description 
+from database_properties
+where property_name like '%SET%';
+
+
+col PARAMETER for a35£»
+select * from NLS_DATABASE_PARAMETERS;
+
+select * from NLS_SESSION_PARAMETERS;
+
+select * from NLS_INSTANCE_PARAMETERS;
+
+                     
+
+
