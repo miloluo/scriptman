@@ -1,0 +1,37 @@
+dbcrmadm           DCUSTHIGH_HIS
+dbcrmadm           SCRMGRADE
+dbcrmadm           SCRMCARDTYPE
+dbcustadm          DLOGINMSG
+dbcrmadm           DFNDMANAGERMSG
+product            SPMATTRTYPEDEF 
+dbcustadm          WLOCALBLACKLIST
+dbcustadm          SACTIVITY
+dbchnadm           DCHNREWARDMANUAL
+dbcustadm          DCUSTTERMCONTRACT
+dbchnadm           DCHNRESCARDINFO0000
+dbchnadm           WCHNRESINOUT201211
+dbcustadm          WLOGINOPR201211
+dbresadm           DCUSTRES
+dbresadm           SSELFFEESCHEME
+dbchnadm           DCHNGROUPOTHERMSG
+dbchnadm           DCHNRESPRINTINFO
+dbcnntadm          DKFSHEETTMSG
+dbcnntadm          DKFUSERCNTCTMSG
+dbchnadm           SCHN3GPOSTLEVEL
+dbchnadm           DCHN3GRESADJUST
+dbchnadm           WCHNRESSALE201211
+product            PRODUCT_OFFER_ATTR
+dbcrmadm           DCUSTGRPDOC_HIS
+dbcrmadm           DCUSTGRPUSER_HIS
+dbchnadm           DCHNCUSTMSGEXTHIS
+
+
+
+
+
+
+
+
+ 
+
+

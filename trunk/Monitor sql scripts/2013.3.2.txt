@@ -1,0 +1,147 @@
+set linesize 200;
+col username for a15;
+col machine for a10;
+col program for a25;
+col module for a25;
+col event for a20;
+select inst_id, sid, seq#, username,event, machine, program, module, service_name from gv$session where program like '%RkfAllCustInfo%';
+
+SQL> select inst_id, sid, seq#, username,event, machine, program, module, service_name from gv$session where program like '%RkfAllCustInfo%';
+
+   INST_ID        SID       SEQ# USERNAME        EVENT                MACHINE    PROGRAM                   MODULE                    SERVICE_NAME
+---------- ---------- ---------- --------------- -------------------- ---------- ------------------------- ------------------------- ----------------------------------------------------------------
+         1       3967      57566 DBCUSTOPR       SQL*Net message from xjas2      RkfAllCustInfo@xjas2 (TNS RkfAllCustInfo@xjas2 (TNS crmdb
+                                                  client                          V1-V3)                    V1-V3)
+
+         1       5159        512 DBCUSTOPR       db file sequential r xjas2      RkfAllCustInfo@xjas2 (TNS RkfAllCustInfo@xjas2 (TNS crmdb
+                                                 ead                              V1-V3)                    V1-V3)
+
+         1       5599      59782 DBCUSTOPR       SQL*Net message from xjas2      RkfAllCustInfo@xjas2 (TNS RkfAllCustInfo@xjas2 (TNS crmdb
+
+   INST_ID        SID       SEQ# USERNAME        EVENT                MACHINE    PROGRAM                   MODULE                    SERVICE_NAME
+---------- ---------- ---------- --------------- -------------------- ---------- ------------------------- ------------------------- ----------------------------------------------------------------
+
+         2       5164      32223 DBCUSTOPR       SQL*Net message from xjas2      RkfAllCustInfo@xjas2 (TNS RkfAllCustInfo@xjas2 (TNS crmdb
+                                                  client                          V1-V3)                    V1-V3)
+
+         2       5596      26708 DBCUSTOPR       SQL*Net message from xjas2      RkfAllCustInfo@xjas2 (TNS RkfAllCustInfo@xjas2 (TNS crmdb
+                                                  client                          V1-V3)                    V1-V3)
+
+         2       5600      63048 DBCUSTOPR       SQL*Net message from xjas2      RkfAllCustInfo@xjas2 (TNS RkfAllCustInfo@xjas2 (TNS crmdb
+                                                  client                          V1-V3)                    V1-V3)
+
+         2       5604      14483 DBCUSTOPR       SQL*Net message from xjas2      RkfAllCustInfo@xjas2 (TNS RkfAllCustInfo@xjas2 (TNS crmdb
+
+
+
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_ENABLE(service_name => 'crmdb', module_name => 'RkfAllCustInfo@xjas2', action_name => DBMS_MONITOR.ALL_ACTIONS, waits => TRUE,  binds => TRUE);
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_DISABLE(service_name => 'crmdb', module_name => 'RkfAllCustInfo@xjas2');
+
+
+select inst_id, sid, seq#, username, program, module, service_name from gv$session where username='SCOTT';
+
+-- for sys
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_ENABLE(service_name => 'SYS$USERS', module_name => 'sqlplus@rac1 (TNS V1-V3)', action_name => DBMS_MONITOR.ALL_ACTIONS, waits => TRUE,  binds => TRUE);
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_DISABLE(service_name => 'SYS$USERS', module_name => 'sqlplus@rac1 (TNS V1-V3)');
+
+-- for scott
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_ENABLE(service_name => 'SYS$USERS', module_name => 'SQL*Plus', action_name => DBMS_MONITOR.ALL_ACTIONS, waits => TRUE,  binds => TRUE);
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_DISABLE(service_name => 'SYS$USERS', module_name => 'SQL*Plus');
+
+
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_ENABLE(service_name => 'SYS$USERS', module_name => 'SQL*Plus', action_name => DBMS_MONITOR.ALL_ACTIONS, waits => TRUE,  binds => TRUE);
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_DISABLE(service_name => 'SYS$USERS', module_name => 'SQL*Plus');
+
+
+
+
+call     count       cpu    elapsed       disk      query    current        rows
+------- ------  -------- ---------- ---------- ---------- ----------  ----------
+Parse        0      0.00       0.00          0          0          0           0
+Execute      0      0.00       0.00          0          0          0           0
+Fetch     2380      0.19       0.34          0       2840          0       35687
+------- ------  -------- ---------- ---------- ---------- ----------  ----------
+total     2380      0.19       0.34          0       2840          0       35687
+
+
+
+call     count       cpu    elapsed       disk      query    current        rows
+------- ------  -------- ---------- ---------- ---------- ----------  ----------
+Parse        1      0.00       0.01          0          0          0           0
+Execute      1      0.00       0.00          0          0          0           0
+Fetch     3358      0.27       0.53        692       3994          0       50343
+------- ------  -------- ---------- ---------- ---------- ----------  ----------
+total     3360      0.27       0.54        692       3994          0       50343
+
+
+call     count       cpu    elapsed       disk      query    current        rows
+------- ------  -------- ---------- ---------- ---------- ----------  ----------
+Parse        1      0.01       0.05          5         52          0           0
+Execute      1      0.00       0.00          0          0          0           0
+Fetch     3358      0.21       0.47        692       3994          0       50343
+------- ------  -------- ---------- ---------- ---------- ----------  ----------
+total     3360      0.23       0.52        697       4046          0       50343
+
+
+call     count       cpu    elapsed       disk      query    current        rows
+------- ------  -------- ---------- ---------- ---------- ----------  ----------
+Parse        1      0.01       0.23          5         52          0           0
+Execute      1      0.00       0.00          0          0          0           0
+Fetch     3358      0.25       0.59        692       3994          0       50343
+------- ------  -------- ---------- ---------- ---------- ----------  ----------
+total     3360      0.26       0.82        697       4046          0       50343
+
+
+call     count       cpu    elapsed       disk      query    current        rows
+------- ------  -------- ---------- ---------- ---------- ----------  ----------
+Parse        0      0.00       0.00          0          0          0           0
+Execute      0      0.00       0.00          0          0          0           0
+Fetch     2811      0.20       0.56        588       3351          0       42152
+------- ------  -------- ---------- ---------- ---------- ----------  ----------
+total     2811      0.20       0.56        588       3351          0       42152
+
+
+call     count       cpu    elapsed       disk      query    current        rows
+------- ------  -------- ---------- ---------- ---------- ----------  ----------
+Parse        1      0.00       0.05          5         52          0           0
+Execute      1      0.00       0.00          0          0          0           0
+Fetch      122      0.01       0.04         24        145          0        1816
+------- ------  -------- ---------- ---------- ---------- ----------  ----------
+total      124      0.02       0.09         29        197          0        1816
+Misses in library cache during parse: 1
+Optimizer mode: ALL_ROWS
+Parsing user id: SYS
+
+Rows     Row Source Operation
+-------  ---------------------------------------------------
+   1816  TABLE ACCESS FULL T (cr=145 pr=24 pw=0 time=15928 us)
+
+
+Elapsed times include waiting on following events:
+  Event waited on                             Times   Max. Wait  Total Waited
+  ----------------------------------------   Waited  ----------  ------------
+  SQL*Net message to client                     123        0.00          0.00
+  db file sequential read                         1        0.00          0.00
+  gc cr multi block request                       3        0.00          0.00
+  db file scattered read                          3        0.01          0.02
+  SQL*Net message from client                   123        6.97         12.52
+  SQL*Net break/reset to client                   1        0.00          0.00
+********************************************************************************
+
+
+-- for sys
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_ENABLE(service_name => 'SYS$USERS', module_name => 'sqlplus@rac1 (TNS V1-V3)', action_name => DBMS_MONITOR.ALL_ACTIONS, waits => TRUE,  binds => TRUE);
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_DISABLE(service_name => 'SYS$USERS', module_name => 'sqlplus@rac1 (TNS V1-V3)');
+
+
+50343 rows selected.
+
+Elapsed: 00:00:29.51
+
+
+Elapsed: 00:00:34.22
+
+Elapsed: 00:00:57.44
+
+
+

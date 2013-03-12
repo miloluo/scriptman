@@ -1,0 +1,50 @@
+set linesize 200;
+col username for a15;
+col machine for a10;
+col program for a25;
+col module for a25;
+col event for a20;
+select inst_id, sid, seq#, username,event, machine, program, module, service_name from gv$session where program like '%RkfAllCustInfo%';
+
+SQL> select inst_id, sid, seq#, username,event, machine, program, module, service_name from gv$session where program like '%RkfAllCustInfo%';
+
+   INST_ID        SID       SEQ# USERNAME        EVENT                MACHINE    PROGRAM                   MODULE                    SERVICE_NAME
+---------- ---------- ---------- --------------- -------------------- ---------- ------------------------- ------------------------- ----------------------------------------------------------------
+         1       3967      57566 DBCUSTOPR       SQL*Net message from xjas2      RkfAllCustInfo@xjas2 (TNS RkfAllCustInfo@xjas2 (TNS crmdb
+                                                  client                          V1-V3)                    V1-V3)
+
+         1       5159        512 DBCUSTOPR       db file sequential r xjas2      RkfAllCustInfo@xjas2 (TNS RkfAllCustInfo@xjas2 (TNS crmdb
+                                                 ead                              V1-V3)                    V1-V3)
+
+         1       5599      59782 DBCUSTOPR       SQL*Net message from xjas2      RkfAllCustInfo@xjas2 (TNS RkfAllCustInfo@xjas2 (TNS crmdb
+
+   INST_ID        SID       SEQ# USERNAME        EVENT                MACHINE    PROGRAM                   MODULE                    SERVICE_NAME
+---------- ---------- ---------- --------------- -------------------- ---------- ------------------------- ------------------------- ----------------------------------------------------------------
+
+         2       5164      32223 DBCUSTOPR       SQL*Net message from xjas2      RkfAllCustInfo@xjas2 (TNS RkfAllCustInfo@xjas2 (TNS crmdb
+                                                  client                          V1-V3)                    V1-V3)
+
+         2       5596      26708 DBCUSTOPR       SQL*Net message from xjas2      RkfAllCustInfo@xjas2 (TNS RkfAllCustInfo@xjas2 (TNS crmdb
+                                                  client                          V1-V3)                    V1-V3)
+
+         2       5600      63048 DBCUSTOPR       SQL*Net message from xjas2      RkfAllCustInfo@xjas2 (TNS RkfAllCustInfo@xjas2 (TNS crmdb
+                                                  client                          V1-V3)                    V1-V3)
+
+         2       5604      14483 DBCUSTOPR       SQL*Net message from xjas2      RkfAllCustInfo@xjas2 (TNS RkfAllCustInfo@xjas2 (TNS crmdb
+
+
+
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_ENABLE(service_name => 'crmdb', module_name => 'RkfAllCustInfo@xjas2', action_name => DBMS_MONITOR.ALL_ACTIONS, waits => TRUE,  binds => TRUE);
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_DISABLE(service_name => 'crmdb', module_name => 'RkfAllCustInfo@xjas2');
+
+
+select inst_id, sid, seq#, username, program, module, service_name from gv$session where username='SCOTT';
+
+
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_ENABLE(service_name => 'SYS$USERS', module_name => 'sqlplus', action_name => DBMS_MONITOR.ALL_ACTIONS, waits => TRUE,  binds => TRUE);
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_DISABLE(service_name => 'SYS$USERS', module_name => 'sqlplus');
+
+
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_ENABLE(service_name => 'SYS$USERS', module_name => 'SQL*Plus', action_name => DBMS_MONITOR.ALL_ACTIONS, waits => TRUE,  binds => TRUE);
+exec DBMS_MONITOR.SERV_MOD_ACT_TRACE_DISABLE(service_name => 'SYS$USERS', module_name => 'SQL*Plus');
+

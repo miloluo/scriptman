@@ -30,7 +30,7 @@
 --1. awr or statspack
 ----statspack report
 --SQL> execute statspack.snap;
---SQL> @ ?/rdbms/admin/spreport.sql
+--SQL> @?/rdbms/admin/spreport.sql
 
 ----awr report
 --SQL> exec dbms_workload_repository.create_snapshot();
