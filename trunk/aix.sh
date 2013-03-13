@@ -1,6 +1,6 @@
 #!/usr/bin/ksh
 #
-# Purpose: This script is used for check HPUX info
+# Purpose: This script is used for check AIX info
 # 
 # Update History:
 #  2013-03-07 Inital scripts(Flynt) 
@@ -14,7 +14,7 @@
 #### Some Variables ####
 hostn=`hostname`
 gen_date=`date +%Y%m%d_%H%M%S`
-outfile=AIX_${hostn}_${gen_date}.dat
+outfile=/tmp/aticheck/host/AIX_${hostn}_${gen_date}.dat
 
 
 #### Command Definition ####
@@ -35,7 +35,9 @@ LSATTR=/usr/sbin/lsattr
 ERRPT=/usr/bin/errpt
 PRTCONF=/usr/sbin/prtconf
 ULIMIT=/usr/bin/ulimit
-BINDPROCESSOR=/usr/sbin/bindprocessor
+BINDPROCESSOR=/usr/sbin/bindprocessor    
+INSTFIX=/usr/sbin/instfix
+TEST=/user/sbin/aaaa
 
 
 ############################
@@ -43,7 +45,7 @@ BINDPROCESSOR=/usr/sbin/bindprocessor
 
 #### Command List ####
 # A step for merge those command into a variable #
-CMDLIST="$OSLEVEL $UNAME $UPTIME $IFCONFIG $NETSTAT $VMSTAT $IOSTAT $DF $LSPV $LSVG $LSPS $LSLPP $LSATTR $ERRPT $PRTCONF $ULIMIT $BINDPROCESSOR"
+CMDLIST="$OSLEVEL $UNAME $UPTIME $IFCONFIG $NETSTAT $VMSTAT $IOSTAT $DF $LSPV $LSVG $LSPS $LSLPP $LSATTR $ERRPT $PRTCONF $ULIMIT $BINDPROCESSOR $INSTFIX $TEST"
 
 ##### Validate commands #####
 echo;
@@ -74,13 +76,16 @@ do
   elif  echo $c | grep bindprocessor >/dev/null 2>&1
   then 
     c=$c" -q"
+  elif  echo $c | grep instfix >/dev/null 2>&1
+  then 
+    c=$c" -ia"  
   fi
 
 #### Test if the command works ####
   $c > /dev/null 2>&1
   if [ `echo $?` -gt 0 ]
   then
-    err_cmd_cnt=$err_cmd_cnt+1
+    err_cmd_cnt=$((err_cmd_cnt+1))
     err_cmd=$err_cmd" \n $c"
   fi
 done;
@@ -98,6 +103,10 @@ then
   echo "Do you want to break to check above WARNING? (You can have 10 seconds)"
   echo "If you want to BREAK, please use CTRL+C to BREAK this script!"
   sleep 10;
+else
+  echo;
+  echo "Cool! Commands seems to work for you!"  
+  echo;
 fi
 
 ##### Collect OS info #####
@@ -107,91 +116,133 @@ echo ">>>>> 2. Begin to collect OS info..."
 echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 echo; 
 
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "########################## uname -a #########################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "uname -a">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "oslevel -s">>/tmp/aticheck/host/${hostn}_$hour
+echo "#############################################################" >> $outfile
+echo "########################## uname -a #########################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$UNAME -a" >> $outfile
+ksh -c "$OSLEVEL -s" >> $outfile
 
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "######################## uptime ###########################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "uptime">>/tmp/aticheck/host/${hostn}_$hour
+echo >> $outfile;  
+echo >> $outfile;
+echo "#############################################################" >> $outfile
+echo "######################## uptime #############################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$UPTIME" >> $outfile
 
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "######################## ifconfig ###########################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "ifconfig -a">>/tmp/aticheck/host/${hostn}_$hour
+echo >> $outfile;  
+echo >> $outfile;
+echo "#############################################################" >> $outfile
+echo "######################## ifconfig ###########################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$IFCONFIG -a" >> $outfile                                       
 
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "######################## netstat -in ########################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "netstat -in">>/tmp/aticheck/host/${hostn}_$hour
+echo >> $outfile;  
+echo >> $outfile;
+echo "#############################################################" >> $outfile
+echo "######################## netstat -in ########################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$NETSTAT -in">>$outfile
 
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "######################## netstat -rn ########################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "netstat -rn">>/tmp/aticheck/host/${hostn}_$hour
-		
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "######################### vmstat 2 10 ########################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "vmstat 2 5">>/tmp/aticheck/host/${hostn}_$hour
+echo >> $outfile;  
+echo >> $outfile;
+echo "#############################################################" >> $outfile
+echo "######################## netstat -rn ########################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$NETSTAT -rn" >> $outfile                                      
 
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "######################### iostat 1 5 ########################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "iostat 1 5">>/tmp/aticheck/host/${hostn}_$hour
+echo >> $outfile;  
+echo >> $outfile;	
+echo "#############################################################" >> $outfile
+echo "######################### vmstat 2 10 #######################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$VMSTAT 2 5" >> $outfile
 
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "######################## File System ########################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "df -g">>/tmp/aticheck/host/${hostn}_$hour
+echo >> $outfile;  
+echo >> $outfile;
+echo "#############################################################" >> $outfile
+echo "######################### iostat 1 5 ########################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$IOSTAT 1 5" >> $outfile                                          
 
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "######################## LVM or ZFS #########################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "lspv">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "lsvg">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "lsvg -o">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "lsvg rootvg">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "lsvg -l rootvg">>/tmp/aticheck/host/${hostn}_$hour
+echo >> $outfile;  
+echo >> $outfile;
+echo "#############################################################" >> $outfile
+echo "######################## File System ########################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$DF -g" >> $outfile
+
+echo >> $outfile;  
+echo >> $outfile;
+echo "#############################################################" >> $outfile
+echo "######################## LVM or ZFS #########################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$LSPV" >> $outfile
+echo >> $outfile;
+ksh -c "$LSVG" >> $outfile
+echo >> $outfile;
+ksh -c "$LSVG -o" >> $outfile
+echo >> $outfile;
+ksh -c "$LSVG rootvg" >> $outfile
+echo >> $outfile;
+ksh -c "$LSVG -l rootvg" >> $outfile
+
+echo >> $outfile;  
+echo >> $outfile;
+echo "#############################################################" >> $outfile
+echo "####################### paging space ########################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$LSPS -a" >> $outfile
+echo >> $outfile;
+ksh -c "$LSPS -s" >> $outfile
+
+echo >>$outfile;  
+echo >>$outfile;
+echo "#############################################################" >> $outfile
+echo "####################### LG CPU Info #########################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$BINDPROCESSOR -q" >> $outfile
+
+echo >> $outfile;  
+echo >> $outfile;
+echo "#############################################################" >> $outfile
+echo "######################### unlimit ###########################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$ULIMIT -a" >> $outfile
+
+echo >> $outfile;  
+echo >> $outfile;
+echo "#############################################################" >> $outfile
+echo "####################### Hardware Info #######################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$PRTCONF" >> $outfile
+
+echo >> $outfile;  
+echo >> $outfile;
+echo "#############################################################" >> $outfile
+echo "####################### OS Package Info #####################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$LSLPP -h" >> $outfile
+echo >> $outfile;
+echo >> $outfile;
+ksh -c "$INSTFIX -ia" >> $outfile
+
+echo >> $outfile;  
+echo >> $outfile;  
+echo "#############################################################" >> $outfile
+echo "##################### System/Kernel Settings ################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$LSATTR -El sys0">>$outfile 
+
+echo >> $outfile;  
+echo >> $outfile;	
+echo "#############################################################" >> $outfile
+echo "######################## errpt Info #########################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$ERRPT -d H" >> $outfile	
+echo >> $outfile;
+echo >> $outfile;
+ksh -c "$ERRPT -a" >> $outfile	
 	
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "####################### paging space ########################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "lsps -a">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "lsps -s">>/tmp/aticheck/host/${hostn}_$hour
-	
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "####################### LG CPU Info #######################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "bindprocessor -q">>/tmp/aticheck/host/${hostn}_$hour
-
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "######################### unlimit ###########################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "ulimit -a">>/tmp/aticheck/host/${hostn}_$hour
-	
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "####################### Hardware Info #######################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "prtconf">>/tmp/aticheck/host/${hostn}_$hour
-	
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "####################### OS Package Info #####################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "lslpp -h">>/tmp/aticheck/host/${hostn}_$hour
-  ksh -c "/usr/sbin/instfix -ia">>/tmp/aticheck/host/${hostn}_$hour
-    
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "##################### System/Kernel Settings ################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "/usr/sbin/lsattr -El sys0">>/tmp/aticheck/host/${hostn}_$hour 
-  
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "######################## errpt Info #########################">>/tmp/aticheck/host/${hostn}_$hour
-	echo "#############################################################">>/tmp/aticheck/host/${hostn}_$hour
-	ksh -c "errpt -d H">>/tmp/aticheck/host/${hostn}_$hour	
-	ksh -c "errpt -a">>/tmp/aticheck/host/${hostn}_$hour	
-	echo "AIX Checked!"
+echo;
+echo "Finishe AIX Collection!"
+echo;
