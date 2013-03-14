@@ -34,8 +34,8 @@ alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
 select sample_time, sql_id, event, current_obj#
   from gv$active_session_history
 where sample_time between
-       to_date('01-FEB-2013 00:10:00', 'DD-MON-YYYY HH24:MI:SS') and
-       to_date('01-FEB-2013 01:40:00', 'DD-MON-YYYY HH24:MI:SS')
+       to_date('01-JAN-2013 00:55:00', 'DD-MON-YYYY HH24:MI:SS') and
+       to_date('01-JAN-2013 01:03:00', 'DD-MON-YYYY HH24:MI:SS')
    and event like '%gc buffer busy%' 
 group by sample_time, sql_id, event, current_obj#
 order by sample_time, sql_id;
@@ -44,9 +44,9 @@ order by sample_time, sql_id;
 select current_obj#, sql_id, event, count(1) cnt
   from gv$active_session_history
 where sample_time between
-       to_date('01-FEB-2013 00:10:00', 'DD-MON-YYYY HH24:MI:SS') and
-       to_date('01-FEB-2013 01:30:00', 'DD-MON-YYYY HH24:MI:SS')
-   --and event like '%row cache%' 
+       to_date('31-DEC-2012 17:00:00', 'DD-MON-YYYY HH24:MI:SS') and
+       to_date('31-DEC-2012 17:25:00', 'DD-MON-YYYY HH24:MI:SS')
+   and event like '%gc buffer busy%' 
 group by sql_id, event, current_obj#
 order by current_obj#, cnt desc, sql_id;
 
@@ -67,7 +67,7 @@ FROM   v$session s,
 WHERE  s.SQL_HASH_VALUE = a.HASH_VALUE
 AND    s.SQL_ADDRESS = a.ADDRESS
 AND    s.PADDR = p.ADDR
-and    s.sid =&sid;
+and    s.sid =;
 /  
 
 

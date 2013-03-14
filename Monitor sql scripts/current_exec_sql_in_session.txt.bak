@@ -12,7 +12,7 @@ SELECT s.sid,
        s.status,
        s.process,
        s.schemaname,
-       a.sql_id,
+       s.osuser,
        a.sql_text,
        p.program
 FROM   v$session s,
