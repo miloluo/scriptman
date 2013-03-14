@@ -1,25 +1,6 @@
 -- ##################################################################################
 -- Script Name: Oracle Check
--- ################################################################################## 
--- Purpose: This script is used to daily check Oracle database
--- Maintainers: Jet, Milo
--- Version change and reason:
----- v0.1   Script initial (Jet, Milo)
----- v0.1.1 Added the script header and modify need manually part (Milo)
-----        modify nls_date_format=english to avoid spool file issue (Milo) 
-----        modify the comments in wait and related sql (Milo)
-----        add query sga auto resize view v$sga_resize_ops (Milo)
----- v0.1.2 Add more contents for pm report and modify the order of sql queries (Milo) 
----- v0.1.3 Add backup info part (Jet)
----- v0.1.4 Add some columns(version, modified) in dba_registry (Milo)
----- v0.1.5 Add Part 2.7 resource check (Milo)
-----        Modify the v$log_history to latest 30 days history(Milo)
----- V0.1.6 Add missing crs check contents(Milo)
-----        Add "tablespace cnt" alias for query(Milo)
-----        Move v$sga_resize_ops to Performance session(Milo)
-----        Remove datafile name check as datafile autoextend check already cover(Milo)
-
-
+-- 
 -- ##################################################################################
 
 
@@ -30,7 +11,7 @@
 --1. awr or statspack
 ----statspack report
 --SQL> execute statspack.snap;
---SQL> @?/rdbms/admin/spreport.sql
+--SQL> @ ?/rdbms/admin/spreport.sql
 
 ----awr report
 --SQL> exec dbms_workload_repository.create_snapshot();
@@ -53,30 +34,6 @@
 --------------Part 2: Sql Query -----------------
 -- ##################################################################################
 
--- Generate a spool file name
-
-set echo off 
-set feedback off 
-alter session set nls_date_language=english;
-column timecol new_value timestamp 
-column spool_extension new_value suffix 
-select to_char(sysdate,'Mondd_hhmi') timecol, 
-'.out' spool_extension from sys.dual; 
-column output new_value dbname 
-select value || '_' output 
-from v$parameter where name = 'db_name'; 
-spool Oracle_&&dbname&&timestamp&&suffix 
-
-set linesize 79
-set pagesize 180
-set long 1000
-set trim on 
-set trims on 
-alter session set nls_date_format = 'MM/DD HH24:MI:SS'; 
-set feedback on 
-select to_char(sysdate) time from dual; 
- 
-set echo on 
 
 -------------------------------
 
@@ -656,9 +613,11 @@ select * from v$resource_limit;
 -- Check if there is crs in RAC ( double check )
 ! crs_stat -t
 
--- ##################################################################################
+#-- #######################################################
+#-- 2013-03-05:showdump 
+#-- #######################################################
+#select value || '/' ||'alert*.log' as dump from v$parameter where name='background_dump_dest';
 
-spool off
+#-- ##################################################################################
+
 exit;
-
-

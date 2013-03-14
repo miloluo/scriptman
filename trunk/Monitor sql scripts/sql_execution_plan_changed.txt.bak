@@ -1,0 +1,39 @@
+Want to Know if Execution Plan Changed Recently?
+ 
+ 
+set lines 150 pages 150
+col BEGIN_INTERVAL_TIME for a23
+col PLAN_HASH_VALUE for 9999999999
+col date_time for a30
+col snap_id heading 'SnapId'
+col executions_delta heading "No. of exec"
+col sql_profile heading "SQL|Profile" for a7
+col date_time heading 'Date time'
+
+col avg_lio heading 'LIO/exec' for 99999999999.99
+col avg_cputime heading 'CPUTIM/exec' for 9999999.99
+col avg_etime heading 'ETIME/exec' for 9999999.99
+col avg_pio heading 'PIO/exec' for 9999999.99
+col avg_row heading 'ROWs/exec' for 9999999.99
+SELECT distinct
+s.snap_id ,
+PLAN_HASH_VALUE,
+to_char(s.BEGIN_INTERVAL_TIME,'mm/dd/yy_hh24mi')|| to_char(s.END_INTERVAL_TIME,'_hh24mi') Date_Time,
+SQL.executions_delta,
+SQL.buffer_gets_delta/decode(nvl(SQL.executions_delta,0),0,1,SQL.executions_delta) avg_lio,
+--SQL.ccwait_delta,
+(SQL.cpu_time_delta/1000000)/decode(nvl(SQL.executions_delta,0),0,1,SQL.executions_delta) avg_cputime ,
+(SQL.elapsed_time_delta/1000000)/decode(nvl(SQL.executions_delta,0),0,1,SQL.executions_delta) avg_etime,
+SQL.DISK_READS_DELTA/decode(nvl(SQL.executions_delta,0),0,1,SQL.executions_delta) avg_pio,
+SQL.rows_processed_total/decode(nvl(SQL.executions_delta,0),0,1,SQL.executions_delta) avg_row
+--,SQL.sql_profile
+FROM
+dba_hist_sqlstat SQL,
+dba_hist_snapshot s
+WHERE
+SQL.instance_number =(select instance_number from v$instance)
+and SQL.dbid =(select dbid from v$database)
+and s.snap_id = SQL.snap_id
+AND sql_id in
+('&SQLID') order by s.snap_id
+/

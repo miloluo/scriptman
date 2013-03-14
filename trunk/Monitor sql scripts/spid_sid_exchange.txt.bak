@@ -27,5 +27,3 @@ select spid from v$process where addr=(select paddr from v$session where sid=&si
 select s.sid || ',' ||s.serial# as sid_ser#,p.spid as ospid, s.username, s.machine, s.program
 from v$session s, v$process p
 where s.username is not null; 
-
-

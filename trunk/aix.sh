@@ -3,6 +3,8 @@
 # Purpose: This script is used for check AIX info
 # 
 # Update History:
+#  Date       Modification
+#  ---------- --------------------------------------------------------------------------------------
 #  2013-03-07 Inital scripts(Flynt) 
 #  2013-03-12 TOP command collection update.(Milo)
 #             Modify code structure. (Milo)
@@ -217,16 +219,6 @@ echo "#############################################################" >> $outfile
 ksh -c "$PRTCONF" >> $outfile
 
 echo >> $outfile;  
-echo >> $outfile;
-echo "#############################################################" >> $outfile
-echo "####################### OS Package Info #####################" >> $outfile
-echo "#############################################################" >> $outfile
-ksh -c "$LSLPP -h" >> $outfile
-echo >> $outfile;
-echo >> $outfile;
-ksh -c "$INSTFIX -ia" >> $outfile
-
-echo >> $outfile;  
 echo >> $outfile;  
 echo "#############################################################" >> $outfile
 echo "##################### System/Kernel Settings ################" >> $outfile
@@ -242,7 +234,18 @@ ksh -c "$ERRPT -d H" >> $outfile
 echo >> $outfile;
 echo >> $outfile;
 ksh -c "$ERRPT -a" >> $outfile	
+
+
+echo >> $outfile;  
+echo >> $outfile;
+echo "#############################################################" >> $outfile
+echo "####################### OS Package Info #####################" >> $outfile
+echo "#############################################################" >> $outfile
+ksh -c "$LSLPP -h" >> $outfile
+echo >> $outfile;
+echo >> $outfile;
+ksh -c "$INSTFIX -ia" >> $outfile
 	
 echo;
-echo "Finishe AIX Collection!"
+echo "Finished AIX Collection!"
 echo;
