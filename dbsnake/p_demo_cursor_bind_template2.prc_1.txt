@@ -1,0 +1,73 @@
+create or replace procedure p_demo_cursor_bind_template2 is
+/*
+用于演示当cursor所对应的数据量未知的情况下的标准处理方式，这里演示的是批量处理的方式
+*/
+
+  --定义批量fetch的数量，我这个例子里是10，建议值是1000
+  CN_BATCH_SIZE constant pls_integer := 10; 
+  
+  --定义存放fetch出来的结果集的数组
+  type typ_empno is table of emp.empno%type index by binary_integer;
+  empnos typ_empno;
+  type typ_ename is table of emp.ename%type index by binary_integer;
+  enames typ_ename;
+  type typ_job is table of emp.job%type index by binary_integer;
+  jobs typ_job;
+  type typ_mgr is table of emp.mgr%type index by binary_integer;
+  mgrs typ_mgr;
+  type typ_hiredate is table of emp.hiredate%type index by binary_integer;
+  hiredates typ_hiredate;
+  type typ_sal is table of emp.sal%type index by binary_integer;
+  sals typ_sal;
+  type typ_comm is table of emp.comm%type index by binary_integer;
+  comms typ_comm;
+  type typ_deptno is table of emp.deptno%type index by binary_integer;
+  deptnos typ_deptno;
+  type typ_rid is table of urowid index by binary_integer;
+  rids typ_rid;
+  
+  --定义cursor,这里有三种定义方式
+  --第一种方式，显式cursor
+  /*cursor cur_emp 
+    is select empno,ename,job,mgr,hiredate,sal,comm,deptno,rowid from emp where empno>7000 order by empno;
+  cursor cur_emp(n_empno_input number) 
+    is select empno,ename,job,mgr,hiredate,sal,comm,deptno,rowid from emp where empno>n_empno_input order by empno;*/
+  
+  --第二种方式，不带绑定变量的ref cursor
+  /*cur_emp sys_refcursor;*/
+  
+  --第三种方式，带绑定变量的ref cursor,相当于带参数的显式cursor
+  cur_emp sys_refcursor;
+  vc_sql varchar2(200) := 'select empno,ename,job,mgr,hiredate,sal,comm,deptno,rowid from emp where empno>:1 order by empno';
+
+begin
+
+  --同样的，对应上述三种cursor有三种不同的打开方式
+  --显式cursor的打开方式
+  /*open cur_emp;
+  open cur_emp(7000);*/
+  
+  --不带绑定变量的ref cursor的打开方式
+  /*open cur_emp for select empno,ename,job,mgr,hiredate,sal,comm,deptno,rowid from emp where empno>7000 order by empno;*/
+  
+  --带绑定变量的ref cursor的打开方式
+  open cur_emp for vc_sql using 7000;
+  
+  --第二种处理方式，批量处理
+  loop
+    fetch cur_emp bulk collect into empnos,enames,jobs,mgrs,hiredates,sals,comms,deptnos,rids limit CN_BATCH_SIZE;
+    for i in 1..rids.count loop     
+      sals(i) := sals(i) + 1;
+    end loop;
+    
+    forall i in 1..rids.count
+      execute immediate 'update emp set sal=:1 where rowid = :2' using sals(i),rids(i);
+      
+    exit when rids.count < CN_BATCH_SIZE;
+  end loop;
+  close cur_emp;
+  
+  commit;  
+  
+end p_demo_cursor_bind_template2;
+/

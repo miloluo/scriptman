@@ -1,0 +1,230 @@
+#!/usr/bin/ksh
+#
+# Purpose: This script is used for check HPUX info
+# 
+# Update History:
+#  2013-03-07 Inital scripts(Flynt) 
+#  2013-03-12 TOP command collection update.(Milo)
+#             Modify code structure. (Milo)
+#             Add command check function, popup if the command available for current user. (Milo)
+#
+#
+#
+
+
+
+#### Some Variables ####
+hostn=`hostname`
+gen_date=`date +%Y%m%d_%H%M%S`
+outfile=/tmp/aticheck/host/HPUX_${hostn}_${gen_date}.dat
+
+
+#### Command Definition ####
+# This area define the command list with variable #
+MACHINFO=/usr/contrib/bin/machinfo
+UNAME=/usr/bin/uname
+UPTIME=/usr/bin/uptime
+TOP=/usr/bin/top
+ULIMIT=/usr/bin/ulimit
+VMSTAT=/usr/bin/vmstat
+IOSTAT=/usr/bin/iostat
+
+LANSCAN=/usr/sbin/lanscan
+NETSTAT=/usr/bin/netstat
+BDF=/usr/bin/bdf
+SWAPINFO=/usr/sbin/swapinfo
+VGDISPLAY=/usr/sbin/vgdisplay
+IOSCAN=/usr/sbin/ioscan
+SHOW_PATCHES=/usr/contrib/bin/show_patches
+IFCONFIG=/usr/sbin/ifconfig
+############################
+
+#### Command List ####
+# A step for merge those command into a variable #
+CMDLIST="$MACHINFO $UNAME $UPTIME $TOP $ULIMIT $VMSTAT $IOSTAT $LANSCAN $BDF $SWAPINFO $VGDISPLAY $IOSCAN $SHOW_PATCHES $IFCONFIG"
+
+##### Validate commands #####
+echo;
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+echo ">>>>> 1. Validating the OS command..."
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+echo;
+
+##### Error command count #####  
+err_cmd_cnt=0 
+err_cmd=""
+  
+##### For Special Case Command #####
+for c in $CMDLIST
+do
+  if  echo $c | grep top  >/dev/null 2>&1
+  then
+    c=$c" -d 1"
+  elif  echo $c | grep iostat >/dev/null 2>&1
+  then
+    c=$c" 1 1"
+  elif  echo $c | grep ioscan >/dev/null 2>&1
+  then
+    c=$c" -fnk"
+  elif  echo $c | grep ifconfig >/dev/null 2>&1
+  then 
+    c=$c" lo0"
+  fi
+
+#### Test if the command works ####
+  $c > /dev/null 2>&1
+  if [ `echo $?` -gt 0 ]
+  then
+    err_cmd_cnt=$((err_cmd_cnt+1))
+    err_cmd=$err_cmd" \n $c"
+  fi
+done;
+ 
+if [ $err_cmd_cnt -gt 0 ]
+then
+  echo;
+  echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+  echo " WARNING!!!!!!!!! "
+  echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+  echo "Totally, there are $err_cmd_cnt commands error!"
+  echo "Error cmd: $err_cmd" | tee cmd_err.log
+  echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+  echo;
+  echo "Do you want to break to check above WARNING? (You can have 10 seconds)"
+  echo "If you want to BREAK, please use CTRL+C to BREAK this script!"
+  sleep 10;
+else
+  echo;
+  echo "Cool! Commands seems to work for you!"  
+  echo;
+fi
+ 
+##### Collect OS info #####
+echo;
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+echo ">>>>> 2. Begin to collect OS info..."
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+echo;  
+echo "#############################################################">>$outfile
+echo "####################### Hardware Info #######################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$MACHINFO" >> $outfile
+
+######echo "`date` check...">${hostn}_$file_id
+echo >>$outfile;
+echo >>$outfile;	
+echo "#############################################################">>$outfile
+echo "########################## uname -a #########################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$UNAME -a" >> $outfile
+
+echo >>$outfile;
+echo >>$outfile;	
+echo "#############################################################">>$outfile
+echo "####################### UPTIME Info #########################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$UPTIME" >> $outfile
+
+echo >>$outfile;
+echo >>$outfile;	
+echo "#############################################################">>$outfile
+echo "####################### TOP Info ############################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$TOP -s 1 -d 1 -n 40 -f $outfile"
+
+echo >>$outfile;
+echo >>$outfile;	
+echo "#############################################################">>$outfile
+echo "####################### limit Info ##########################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$ULIMIT -a" >> $outfile
+
+echo >>$outfile;
+echo >>$outfile;	
+echo "#############################################################">>$outfile
+echo "######################### vmstat 2 10 #######################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$VMSTAT 2 5" >> $outfile
+
+echo >>$outfile;
+echo >>$outfile;	
+echo "#############################################################">>$outfile
+echo "######################### iostat 2 10 #######################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$IOSTAT 2 5" >> $outfile
+
+echo >>$outfile;
+echo >>$outfile;		
+echo "#############################################################">>$outfile
+echo "######################## Network info #######################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$LANSCAN -i | cut -d\" \" -f1 | xargs -n1 $IFCONFIG" >> $outfile
+
+echo >>$outfile;
+echo >>$outfile;	
+echo "#############################################################">>$outfile
+echo "######################## netstat -in ########################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$NETSTAT -in" >> $outfile
+
+echo >>$outfile;
+echo >>$outfile;		
+echo "#############################################################">>$outfile
+echo "######################## netstat -rn ########################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$NETSTAT -rn" >> $outfile
+
+echo >>$outfile;
+echo >>$outfile;		
+echo "#############################################################">>$outfile
+echo "######################## File System ########################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$BDF" >> $outfile
+
+echo >>$outfile;
+echo >>$outfile;		
+echo "#############################################################">>$outfile
+echo "########################  Swap Info  ########################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$SWAPINFO -tm" >> $outfile
+
+echo >>$outfile;
+echo >>$outfile;	
+echo "#############################################################">>$outfile
+echo "########################  VG Info  ##########################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$VGDISPLAY" >> $outfile
+
+echo >>$outfile;
+echo >>$outfile;		
+echo "#############################################################">>$outfile
+echo "######################## CPU INFO ###########################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$IOSCAN -fnkC processor" >> $outfile
+
+echo >>$outfile;
+echo >>$outfile;	
+echo "#############################################################">>$outfile
+echo "####################### OS Patches INFO #####################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "$SHOW_PATCHES" >> $outfile
+
+echo >>$outfile;
+echo >>$outfile;	
+echo "#############################################################">>$outfile
+echo "######################## Porfile INFO #######################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "cat /etc/hosts" >> $outfile
+
+echo;
+echo;		
+echo "#############################################################">>$outfile
+echo "####################### GET syslog ##########################">>$outfile
+echo "#############################################################">>$outfile
+ksh -c "tail -1000 /var/adm/syslog/syslog.log" >> $outfile
+
+echo;
+echo "Finished HPUX Collection!"
+echo;
+
+

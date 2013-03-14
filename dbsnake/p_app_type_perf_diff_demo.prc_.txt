@@ -1,0 +1,130 @@
+create or replace procedure p_app_type_perf_diff_demo(vc_apptype in varchar2) is
+
+/*
+功能： 用于Oracle数据库中四种应用类型（硬解析、软解析、软软解析、一次解析多次执行）的实测性能对比
+作者： cuihua
+创建日期：2013-03-09
+
+输入参数：
+vc_apptype:应用类型（其值可以是TYPE1、TYPE2、TYPE3或TYPE4）
+           TYPE1对应硬解析
+           TYPE2对应软解析
+           TYPE3对应软软解析
+           TYPE4对应一次解析多次执行
+输出参数：
+无
+
+输入输出参数：
+无
+
+调用到的存储过程：
+无
+
+使用类型：
+测试
+*/
+  
+  lc_pin_allocation_gets_start number;
+  lc_pin_allocation_gets_end number;
+  lc_lock_allocation_gets_start number;
+  lc_lock_allocation_gets_end number;
+  lc_lock_gets_start number;
+  lc_lock_gets_end number;
+  lc_gets_start number;
+  lc_gets_end number;
+  lc_pin_gets_start number;
+  lc_pin_gets_end number;
+  lc_load_lock_gets_start number;
+  lc_load_lock_gets_end number;
+  
+  lc_pin_allocation_igets_start number;
+  lc_pin_allocation_igets_end number;
+  lc_lock_allocation_igets_start number;
+  lc_lock_allocation_igets_end number;
+  lc_lock_igets_start number;
+  lc_lock_igets_end number;
+  lc_igets_start number;
+  lc_igets_end number;
+  lc_pin_igets_start number;
+  lc_pin_igets_end number;
+  lc_load_lock_igets_start number;
+  lc_load_lock_igets_end number;
+  
+  duration interval day to second;
+  t_start timestamp;
+  t_end timestamp;  
+  vc_sql varchar2(32767);
+  n_temp number;
+  error_message varchar2(4000);
+  
+  cursor c1 is select level id from dual connect by level <= 10000;
+  type typ_result is record(id number);
+  rec_c1 typ_result;
+  
+begin
+  
+  execute immediate 'alter system flush shared_pool';
+  execute immediate 'alter system flush buffer_cache';
+  
+  select gets,immediate_gets into lc_pin_allocation_gets_start,lc_pin_allocation_igets_start from v$latch where name = 'library cache pin allocation';
+  select gets,immediate_gets into lc_lock_allocation_gets_start,lc_lock_allocation_igets_start from v$latch where name = 'library cache lock allocation';
+  select gets,immediate_gets into lc_lock_gets_start,lc_lock_igets_start from v$latch where name = 'library cache lock';
+  select gets,immediate_gets into lc_gets_start,lc_igets_start from v$latch where name = 'library cache';
+  select gets,immediate_gets into lc_pin_gets_start,lc_pin_igets_start from v$latch where name = 'library cache pin';
+  select gets,immediate_gets into lc_load_lock_gets_start,lc_load_lock_igets_start from v$latch where name = 'library cache load lock';
+  
+  t_start := systimestamp;  
+  vc_sql := 'select count(*) from t1 where object_id = :1'; 
+  
+  if ( upper(vc_apptype) = 'TYPE1' ) then
+    for i in 1..10000 loop
+      execute immediate 'select count(*) from t1 where object_id = ' || to_char(i) into n_temp;
+    end loop;
+  elsif ( upper(vc_apptype) = 'TYPE2' ) then
+    execute immediate 'alter session set session_cached_cursors = 0';
+    p_gen_multl_sql_with_bind_v(vc_sql,n_temp);
+  elsif ( upper(vc_apptype) = 'TYPE3' ) then
+    execute immediate 'alter session set session_cached_cursors = 200';
+     p_gen_multl_sql_with_bind_v(vc_sql,n_temp);      
+  elsif ( upper(vc_apptype) = 'TYPE4' ) then
+    execute immediate 'alter session set session_cached_cursors = 200';
+    open c1;
+    fetch c1 into rec_c1;
+    while (c1%found) loop
+      execute immediate vc_sql into n_temp using rec_c1.id;    
+      fetch c1 into rec_c1;
+    end loop;
+    close c1;   
+  end if;
+   
+  t_end := systimestamp;
+  duration := t_end - t_start;
+  dbms_output.put_line ('Total elapsed time is : '|| to_char(duration));
+  
+  select gets,immediate_gets into lc_pin_allocation_gets_end,lc_pin_allocation_igets_end from v$latch where name = 'library cache pin allocation';
+  select gets,immediate_gets into lc_lock_allocation_gets_end,lc_lock_allocation_igets_end from v$latch where name = 'library cache lock allocation';
+  select gets,immediate_gets into lc_lock_gets_end,lc_lock_igets_end from v$latch where name = 'library cache lock';
+  select gets,immediate_gets into lc_gets_end,lc_igets_end from v$latch where name = 'library cache';
+  select gets,immediate_gets into lc_pin_gets_end,lc_pin_igets_end from v$latch where name = 'library cache pin';
+  select gets,immediate_gets into lc_load_lock_gets_end,lc_load_lock_igets_end from v$latch where name = 'library cache load lock';
+ 
+  dbms_output.put_line ('Library cache pin allocation gets is : '|| to_char(lc_pin_allocation_gets_end-lc_pin_allocation_gets_start));
+  dbms_output.put_line ('Library cache pin allocation immediate gets is : '|| to_char(lc_pin_allocation_igets_end-lc_pin_allocation_igets_start));  
+  dbms_output.put_line ('Library cache lock allocation gets is : '|| to_char(lc_lock_allocation_gets_end-lc_lock_allocation_gets_start));
+  dbms_output.put_line ('Library cache lock allocation immediate gets is : '|| to_char(lc_lock_allocation_igets_end-lc_lock_allocation_igets_start));
+  dbms_output.put_line ('Library cache lock gets is : '|| to_char(lc_lock_gets_end-lc_lock_gets_start));
+  dbms_output.put_line ('Library cache lock immediate gets is : '|| to_char(lc_lock_igets_end-lc_lock_igets_start));  
+  dbms_output.put_line ('Library cache gets is : '|| to_char(lc_gets_end-lc_gets_start));
+  dbms_output.put_line ('Library cache immediate gets is : '|| to_char(lc_igets_end-lc_igets_start));  
+  dbms_output.put_line ('Library cache pin gets is : '|| to_char(lc_pin_gets_end-lc_pin_gets_start));
+  dbms_output.put_line ('Library cache pin immediate gets is : '|| to_char(lc_pin_igets_end-lc_pin_igets_start));  
+  dbms_output.put_line ('Library cache load lock gets is : '|| to_char(lc_load_lock_gets_end-lc_load_lock_gets_start));
+  dbms_output.put_line ('Library cache load lock immediate gets is : '|| to_char(lc_load_lock_igets_end-lc_load_lock_igets_start));    
+
+exception
+  when others then
+    error_message :='E'|| sqlcode || sqlerrm;
+    dbms_output.put_line(error_message);
+    return;  
+end p_app_type_perf_diff_demo;
+/
