@@ -1,0 +1,132 @@
+create or replace procedure P_SYS_GEN_CODE_TEMPLATE1
+(i_vc_owner in varchar2,
+ i_vc_tablename in varchar2,
+ o_vc_return_flag out varchar2) is
+/*
+功能： 用于自动产生cursor与绑定变量混合使用的模板一(即数据量未知情况下的一条一条处理）的代码架构
+作者： cuihua
+创建日期：2009-04-13
+
+输入参数：
+i_vc_owner:待产生代码结构的表名所在的schema名
+i_vc_tablename：待产生代码结构的表名
+
+输出参数：
+o_vc_returnflag：用于判断该存储过程是否成功执行，并在出错后存储相应的错误原因。
+如果它的值的第一位为S，则表明该存储过程成功执行，没有错误。
+如果它的值的第一位为E，则表明该存储过程执行失败，具体错误原因为它的值的第二位到最后一位。
+
+输入输出参数：
+无
+
+调用到的存储过程：
+无
+
+使用类型：
+无
+*/
+
+type typ_columnname is table of dba_tab_columns.COLUMN_NAME%type index by binary_integer;
+columnnames typ_columnname;
+
+vc_temp varchar2(4000);
+n_temp number(13);
+n_itemp number(13);
+
+begin
+
+  o_vc_return_flag := 'S';
+  
+  select column_name bulk collect into columnnames from dba_tab_columns where owner=i_vc_owner and table_name=i_vc_tablename;
+  
+  ----------------------生成Bulk collect into所需的数组---------Begin--------------------------------------------------------------------------------------
+  dbms_output.put_line('  --定义批量fetch的数量，建议值是1000;');
+  dbms_output.put_line('  CN_BATCH_SIZE constant pls_integer := 1000;');
+  
+  dbms_output.put_line(chr(13));
+   
+  dbms_output.put_line('  --定义存放fetch出来的结果集的数组，建议值是1000'); 
+  dbms_output.put_line('  type typ_result is record');  
+  
+  vc_temp := '  (';
+  dbms_output.put(vc_temp);
+  
+  for i in columnnames.first .. columnnames.last loop    
+    vc_temp := lower(columnnames(i)) || ' ' || lower(i_vc_tablename) || '.' || lower(columnnames(i)) || '%type,';
+    if( i = 1 ) then
+      dbms_output.put_line(vc_temp);
+    else
+      dbms_output.put_line('  ' || vc_temp);
+    end if;     
+  end loop;
+  
+  dbms_output.put_line('  rid urowid);');
+  dbms_output.put_line('  type typ_results is varray(1000) of typ_result;');
+  dbms_output.put_line('  results typ_results;');  
+  ----------------------生成Bulk collect into所需的数组---------End--------------------------------------------------------------------------------------
+
+  
+  ----------------------生成cursor定义-------------------------Begin--------------------------------------------------------------------------------------
+  dbms_output.put_line(chr(13));
+  dbms_output.put_line('  cur_' || lower(i_vc_tablename) || ' sys_refcursor;');
+   
+  vc_temp := null;
+  for i in columnnames.first .. columnnames.last loop 
+    if( i = columnnames.count ) then
+      vc_temp := vc_temp || lower(columnnames(i));
+    else
+      vc_temp := vc_temp || lower(columnnames(i)) || ',';      
+    end if;                     
+  end loop;
+  
+  n_temp := trunc(length(vc_temp)/49) + 1;
+  n_itemp := 0;
+  for i in 0 .. n_temp loop
+    n_itemp := i*49 + 1;
+    if( n_itemp <= length(vc_temp) ) then
+      if( n_itemp = 1 ) then
+        --如果这里n_temp=1,则表明这个表的字段数小于7
+        if ( n_temp = 1 ) then
+          dbms_output.put_line('  vc_sql varchar2(4000) :=  ''select ' || substr(vc_temp,n_itemp,49) || ',rowid from ' || lower(i_vc_tablename) || ' where 自定义的带占位符的where条件'';');
+        else
+          dbms_output.put_line('  vc_sql varchar2(4000) :=  ''select ' || substr(vc_temp,n_itemp,49));
+        end if;        
+      else
+        if( n_itemp + 49 >= length(vc_temp) ) then
+          dbms_output.put_line('       ' || substr(vc_temp,n_itemp,49) || ',rowid from ' || lower(i_vc_tablename) || ' where 自定义的带占位符的where条件'';');
+        else
+          dbms_output.put_line('       ' || substr(vc_temp,n_itemp,49));
+        end if;        
+      end if;       
+    end if;                
+  end loop;  
+  ----------------------生成cursor定义--------------------------End--------------------------------------------------------------------------------------
+
+  
+  ----------------------生成cursor的循环部分的代码--------------begin--------------------------------------------------------------------------------------
+  dbms_output.put_line(chr(13));  
+  dbms_output.put_line('begin');  
+  dbms_output.put_line(chr(13));
+  
+  dbms_output.put_line('  --带绑定变量的ref cursor的打开方式');
+  dbms_output.put_line('  open cur_' || lower(i_vc_tablename) || ' for vc_sql using variable;');
+  dbms_output.put_line(chr(13));  
+  
+  dbms_output.put_line('  --第一种处理方式，一条一条处理');
+  dbms_output.put_line('  loop');
+  dbms_output.put_line('    fetch cur_' || lower(i_vc_tablename) || ' bulk collect into results limit CN_BATCH_SIZE;');
+  dbms_output.put_line('    for i in 1 .. results.count loop');
+  dbms_output.put_line('      execute immediate ''sqltext'' using results(i).columnname;');
+  dbms_output.put_line('    end loop;');
+  dbms_output.put_line('    exit when results.count < CN_BATCH_SIZE;');
+  dbms_output.put_line('  end loop;');
+  dbms_output.put_line('  close cur_' || lower(i_vc_tablename) || ';');
+  ----------------------生成cursor的循环部分的代码---------------End-------------------------------------------------------------------------------------- 
+  
+exception
+  when others then
+    o_vc_return_flag := 'E' || '_' || sqlcode || '_' || sqlerrm;    
+    return;
+  
+end P_SYS_GEN_CODE_TEMPLATE1;
+/

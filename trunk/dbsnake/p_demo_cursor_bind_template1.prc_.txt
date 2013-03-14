@@ -1,0 +1,65 @@
+create or replace procedure p_demo_cursor_bind_template1 is
+/*
+用于演示当cursor所对应的数据量未知的情况下的标准处理方式，这里演示的是一条一条处理的方式
+*/
+
+  --定义批量fetch的数量，我这个例子里是10，建议值是1000
+  CN_BATCH_SIZE constant pls_integer := 10; 
+  
+  --定义存放fetch出来的结果集的数组，我这里例子里数组的大小是10，建议值是1000
+  type typ_result is record
+  (empno emp.empno%type,
+  ename emp.ename%type,
+  job emp.job%type,
+  mgr emp.mgr%type,
+  hiredate emp.hiredate%type,
+  sal emp.sal%type,
+  comm emp.comm%type,
+  deptno emp.deptno%type,
+  rid urowid);
+  type typ_results is varray(10) of typ_result;
+  results typ_results;
+  
+  --定义cursor,这里有三种定义方式
+  --第一种方式，显式cursor
+  /*cursor cur_emp 
+    is select empno,ename,job,mgr,hiredate,sal,comm,deptno,rowid from emp where empno>7000 order by empno;
+  cursor cur_emp(n_empno_input number) 
+    is select empno,ename,job,mgr,hiredate,sal,comm,deptno,rowid from emp where empno>n_empno_input order by empno;*/
+  
+  --第二种方式，不带绑定变量的ref cursor
+  /*cur_emp sys_refcursor;*/
+  
+  --第三种方式，带绑定变量的ref cursor,相当于带参数的显式cursor
+  cur_emp sys_refcursor;
+  vc_sql varchar2(200) := 'select empno,ename,job,mgr,hiredate,sal,comm,deptno,rowid from emp where empno>:1 order by empno';
+
+begin
+
+  --同样的，对应上述三种cursor有三种不同的打开方式
+  --显式cursor的打开方式
+  /*open cur_emp;
+  open cur_emp(7000);*/
+  
+  --不带绑定变量的ref cursor的打开方式
+  /*open cur_emp for select empno,ename,job,mgr,hiredate,sal,comm,deptno,rowid from emp where empno>7000 order by empno;*/
+  
+  --带绑定变量的ref cursor的打开方式
+  open cur_emp for vc_sql using 7000;
+  
+  --第一种处理方式，一条一条处理
+  loop
+    fetch cur_emp bulk collect into results limit CN_BATCH_SIZE;
+    for i in 1..results.count loop
+    
+      execute immediate 'update emp set sal=sal+1 where rowid = :1' using results(i).rid;
+    
+    end loop;
+    exit when results.count < CN_BATCH_SIZE;
+  end loop;
+  close cur_emp;
+  
+  commit;  
+  
+end p_demo_cursor_bind_template1;
+/
