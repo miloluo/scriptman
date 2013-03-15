@@ -7,7 +7,7 @@
 ########### NEED TO MODIFY EVERY TIME ##############
 CURRENT_YEAR='2012';
 BEGIN_MONTH='dec';
-FTP_SER='192.168.1.1';
+FTP_SER='192.168.20.100';
 #FTP_SER='130.89.200.16';
 FTP_USER='test';
 FTP_PASSWD='test';
@@ -252,6 +252,6 @@ mput *aticheck.tar
 bye
 
 # Remove the generate log
-echo "Removing the generated logs..."
-rm -f $TMP_RUNING_LOG ${TAR_FILE_NAME}.gz ${TAR_FILE_NAME} $FETCH_LOG ${ALERT_LOC}.gz
+#echo "Removing the generated logs..."
+#rm -f $TMP_RUNING_LOG ${TAR_FILE_NAME}.gz ${TAR_FILE_NAME} $FETCH_LOG ${ALERT_LOC}.gz
 

@@ -1,8 +1,6 @@
 -- ##################################################################################
 -- Script Name: Oracle Check
 -- 
-
-
 -- ##################################################################################
 
 
@@ -36,6 +34,18 @@
 --------------Part 2: Sql Query -----------------
 -- ##################################################################################
 
+
+#### Some format settings
+alter session set nls_date_language=english;
+alter session set nls_date_format = 'MM/DD HH24:MI:SS'; 
+set echo on;
+set linesize 79
+set pagesize 180
+set long 1000
+set trim on 
+set trims on 
+set feedback on 
+select to_char(sysdate) time from dual; 
 
 -------------------------------
 
