@@ -1,0 +1,14 @@
+
+sum=0;
+for i in $(du -sk ora10g_ora_2982.trc ora10g_ora_2463.trc xxx ora10g_ora_2428.trc 2> /dev/null | awk '{print $1}' | xargs) 
+do
+  sum=$(($sum+$i));
+done;
+echo "Totally, those trace files takeup $sum K. ";
+
+
+
+for i in `seq 1 100000`
+do
+		touch $i.txt
+done;
