@@ -618,6 +618,16 @@ select * from v$resource_limit;
 
 
 
+-- ########################################################
+-- Part 2.8 Security Info
+-- ########################################################
+
+-- Showing that which user has DBA role
+select * from dba_role_privs where granted_role='DBA';
+
+-- The password file users, showing that the user has sysdba or sysoper role
+select * from v$pwfile_users;
+
 -- #######################################################
 -- Last Part: check CRS_STAT
 -- #######################################################
