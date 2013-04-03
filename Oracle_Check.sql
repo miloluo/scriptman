@@ -1,6 +1,33 @@
 -- ##################################################################################
 -- Script Name: Oracle Check
--- 
+<<<<<<< .mine-- ################################################################################## 
+-- Purpose: This script is used to daily check Oracle database
+-- Maintainers: Jet, Milo
+-- Version change and reason:
+---- v0.1   Script initial (Jet, Milo)
+---- v0.1.1 Added the script header and modify need manually part (Milo)
+----        modify nls_date_format=english to avoid spool file issue (Milo) 
+----        modify the comments in wait and related sql (Milo)
+----        add query sga auto resize view v$sga_resize_ops (Milo)
+---- v0.1.2 Add more contents for pm report and modify the order of sql queries (Milo) 
+---- v0.1.3 Add backup info part (Jet)
+---- v0.1.4 Add some columns(version, modified) in dba_registry (Milo)
+---- v0.1.5 Add Part 2.7 resource check (Milo)
+----        Modify the v$log_history to latest 30 days history(Milo)
+---- v0.1.6 Add missing crs check contents(Milo)
+----        Add "tablespace cnt" alias for query(Milo)
+----        Move v$sga_resize_ops to Performance session(Milo)
+----        Remove datafile name check as datafile autoextend check already cover(Milo)
+---- v0.1.7 Add Security Part(Part 2.8)  (Milo)
+----        Log switch history change to 10 days. (Milo)
+----            
+---- v0.1.8 Add gather stats job run status(Part 2.5) (Milo)
+----
+----
+
+
+=======-- 
+>>>>>>> .theirs
 -- ##################################################################################
 
 
@@ -35,12 +62,34 @@
 -- ##################################################################################
 
 
--------------------------------
+<<<<<<< .mineset echo off 
+set feedback off 
+column timecol new_value timestamp 
+column spool_extension new_value suffix 
+select to_char(sysdate,'Mondd_hhmi') timecol, 
+'.out' spool_extension from sys.dual; 
+column output new_value dbname 
+select value || '_' output 
+from v$parameter where name = 'db_name'; 
+spool Oracle_&&dbname&&timestamp&&suffix 
+
+set linesize 79
+set pagesize 180
+set long 1000
+set trim on 
+set trims on 
+alter session set nls_date_language=english;
+alter session set nls_date_format = 'MM/DD HH24:MI:SS'; 
+set feedback on 
+select to_char(sysdate) time from dual; 
+ 
+set echo on 
+
+=======>>>>>>> .theirs-------------------------------
 
 -- ########################################################
 -- Part 2.1 Instance (SGA, PGA, Some parameters)
 -- ########################################################
-
 
 -- Check instance running status
 
@@ -93,6 +142,95 @@ column value format a48 wra
 select name, value 
 from v$parameter 
 where isdefault = 'FALSE';
+
+
+-- Add from v0.1.7
+-- Total used memory(SGA+Allocated PGA)
+SELECT a.SGA_MEM + b.PGA_MEM "TOTAL_MEMORY"
+    FROM (SELECT SUM(current_size) / 1024 / 1024 "SGA_MEM"
+            FROM v$sga_dynamic_components,
+                 (SELECT SUM(pga_alloc_mem) / 1024 / 1024 "PGA_MEM"
+                    FROM v$process) a
+           WHERE component IN ('shared pool',
+                               'large pool',
+                               'java pool',
+                               'streams pool',
+                               'DEFAULT buffer cache')) a,
+         (SELECT SUM(pga_alloc_mem) / 1024 / 1024 "PGA_MEM" FROM v$process) b;
+
+
+
+-- Check dynamic SGA componets size situation
+select component,
+       current_size / 1024 / 1024 "CURRENT_SIZE",
+       min_size / 1024 / 1024 "MIN_SIZE",
+       user_specified_size / 1024 / 1024 "USER_SPECIFIED_SIZE",
+       last_oper_type "TYPE"
+  from v$sga_dynamic_components;
+
+
+-- Check each SGA component and their granule_size
+select component, granule_size / 1024 / 1024 "GRANULE_SIZE(Mb)"
+  from v$sga_dynamic_components;
+
+col component for a25
+col status format a10 head "Status"
+col initial_size for 999,999,999,999 head "Initial"
+col parameter for a25 heading "Parameter"
+col final_size for 999,999,999,999 head "Final"
+col changed head "Changed At"
+col low format 999,999,999,999 head "Lowest"
+col high format 999,999,999,999 head "Highest"
+col lowMB format 999,999 head "MBytes"
+col highMB format 999,999 head "MBytes"
+
+SELECT component,
+       parameter,
+       initial_size,
+       final_size,
+       status,
+       to_char(end_time, 'mm/dd/yyyy hh24:mi:ss') changed
+  FROM v$sga_resize_ops
+ ORDER BY component;
+
+SELECT component,
+       min(final_size) low,
+       (min(final_size / 1024 / 1024)) lowMB,
+       max(final_size) high,
+       (max(final_size / 1024 / 1024)) highMB
+  FROM v$sga_resize_ops
+ GROUP BY component
+ ORDER BY component;
+
+-- Added from v0.1.1
+-- Query sga auto resize action (Avaiable for 10g and above)
+
+set linesize 200;
+column component format a20;
+column parameter format a20;
+alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
+select  * from v$sga_resize_ops;
+
+-- Added from v0.1.7
+-- display sga compoent size
+select * from v$sgastat order by bytes asc;
+
+select name, trunc(bytes / 1024 / 1024, 2) "size(MB)"
+  from v$sgastat
+ where pool is null
+union
+select pool, trunc(sum(bytes) / 1024 / 1024, 2) "size(MB)"
+  from v$sgastat
+ where pool is not null
+ group by pool;
+
+select * from V$SGA_CURRENT_RESIZE_OPS;
+
+select * from v$sga_target_advice;
+
+show parameter size
+show parameter statistics        
+
 
 
 -- ########################################################
@@ -160,8 +298,8 @@ FROM   TABLE(dbms_feature_usage_report.display_text);
 
 col Total(GB) for 999,999.99;
 col Total(TB) for 999,999.99;
-SELECT ( d1 + d2 ) / 1024 / 1024 / 1024        "Total(GB)",
-       ( d1 + d2 ) / 1024 / 1024 / 1024 / 1024 "Total(TB)"
+SELECT ( d1 + d2 ) / 1073741824        "Total(GB)",  --1024*1024*1024=1073741824
+       ( d1 + d2 ) / 1099511627776     "Total(TB)"  --1024*1024*1024*1024=1099511627776
 FROM   (SELECT Sum(bytes) d1
         FROM   v$datafile),
        (SELECT Sum(bytes) d2
@@ -196,9 +334,9 @@ col TOTAL(M)  for 999,999,999;
 col FREE(M) for 999,999,999;
 col USED(M) for 999,999,999;
 select tablespace_name,
-       (sum(bytes_used) + sum(bytes_free)) / 1048576 "TOTAL(M)",
-       sum(bytes_used) / 1048576 "USED(M)",
-       sum(bytes_free) / 1048576 "FREE(M)",
+       (sum(bytes_used) + sum(bytes_free)) / 1048576 "TOTAL(M)", --1024*1024=1048576
+       sum(bytes_used) / 1048576 "USED(M)", --1024*1024=1048576
+       sum(bytes_free) / 1048576 "FREE(M)", --1024*1024=1048576
        sum(bytes_used) / (sum(bytes_used) + sum(bytes_free)) * 100 "Used rate(%)"
   from v$temp_space_header
  group by tablespace_name;
@@ -208,6 +346,7 @@ select tablespace_name,
 ---- If the USE(%) > 85%, 
 ---- then the tablespace should be consider to extented. 
 
+-- Normal tablespace
 set linesize 200;
 col tablespace_name for a20;
 col Total(M)  for 999,999,999;
@@ -218,30 +357,33 @@ SELECT D.TABLESPACE_NAME,
        SPACE - NVL(FREE_SPACE, 0) "USED(M)",
        ROUND((1 - NVL(FREE_SPACE, 0) / SPACE) * 100, 2) "USED(%)",
        FREE_SPACE "FREE(M)"
-  FROM (SELECT TABLESPACE_NAME,
-               ROUND(SUM(BYTES) / (1024 * 1024), 2) SPACE,
+FROM (SELECT TABLESPACE_NAME,
+               ROUND(SUM(BYTES) / 1048576, 2) SPACE,
                SUM(BLOCKS) BLOCKS
           FROM DBA_DATA_FILES
          GROUP BY TABLESPACE_NAME) D,
        (SELECT TABLESPACE_NAME,
-               ROUND(SUM(BYTES) / (1024 * 1024), 2) FREE_SPACE
+               ROUND(SUM(BYTES) / 1048576, 2) FREE_SPACE
           FROM DBA_FREE_SPACE
          GROUP BY TABLESPACE_NAME) F
- WHERE D.TABLESPACE_NAME = F.TABLESPACE_NAME(+)
-UNION ALL --if have tempfile
+WHERE D.TABLESPACE_NAME = F.TABLESPACE_NAME(+)
+ORDER BY 4;
+
+
+-- Temporary tablespace
 SELECT D.TABLESPACE_NAME,
        SPACE "Total(M)",
        USED_SPACE "USED(M)",
        ROUND(NVL(USED_SPACE, 0) / SPACE * 100, 2) "USED(%)",
        NVL(FREE_SPACE, 0) "FREE(M)"
   FROM (SELECT TABLESPACE_NAME,
-               ROUND(SUM(BYTES) / (1024 * 1024), 2) SPACE,
+               ROUND(SUM(BYTES) / 1048576, 2) SPACE,
                SUM(BLOCKS) BLOCKS
           FROM DBA_TEMP_FILES
          GROUP BY TABLESPACE_NAME) D,
        (SELECT TABLESPACE_NAME,
-               ROUND(SUM(BYTES_USED) / (1024 * 1024), 2) USED_SPACE,
-               ROUND(SUM(BYTES_FREE) / (1024 * 1024), 2) FREE_SPACE
+               ROUND(SUM(BYTES_USED) / 1048576, 2) USED_SPACE,
+               ROUND(SUM(BYTES_FREE) / 1048576, 2) FREE_SPACE
           FROM V$TEMP_SPACE_HEADER
          GROUP BY TABLESPACE_NAME) F
  WHERE D.TABLESPACE_NAME = F.TABLESPACE_NAME(+)
@@ -319,7 +461,7 @@ SELECT thread#,
        sequence#,
        first_time
 FROM   v$log_history
-where first_time > sysdate - 30
+where first_time > sysdate - 10
 ORDER  BY thread#, sequence#; 
 
 
@@ -570,14 +712,27 @@ where b.sid=sw.sid
 order by s.address,s.piece;
 
 
--- Added from v0.1.1
--- Query sga auto resize action (Avaiable for 10g and above)
+-- Check Auto collect statistics
+---- Check if the gather stats job is enabled
+SET LINESIZE 200;
+COL JOB_ACTION FOR A20;
+select owner, job_name, job_action, enabled, state
+from dba_scheduler_jobs
+where job_name='GATHER_STATS_JOB';
 
+
+---- Check the latest gather stats job running status
 set linesize 200;
-column component format a20;
-column parameter format a20;
-alter session set nls_date_format='yyyy-mm-dd hh24:mi:ss';
-select  * from v$sga_resize_ops;
+col job_name for a20;
+col status for a15;
+col start_date for a25;
+col log_date for a25;
+select log_id, job_name, status, to_char(actual_start_date, 'yyyy-mm-dd hh24:mi:ss') start_date,
+       to_char(log_date, 'yyyy-mm-dd hh24:mi:ss') log_date
+from   dba_scheduler_job_run_details
+where job_name='GATHER_STATS_JOB'
+order by 4;   
+
 
 
 
@@ -604,6 +759,16 @@ from v$backup_piece_details;
 set linesize 200;
 select * from v$resource_limit;
 
+
+-- ########################################################
+-- Part 2.8 Security Info
+-- ########################################################
+
+-- Showing that which user has DBA role
+select * from dba_role_privs where granted_role='DBA';
+
+-- The password file users, showing that the user has sysdba or sysoper role
+select * from v$pwfile_users;
 
 
 -- #######################################################
