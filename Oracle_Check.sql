@@ -1,6 +1,6 @@
 -- ##################################################################################
 -- Script Name: Oracle Check
-<<<<<<< .mine-- ################################################################################## 
+-- ################################################################################## 
 -- Purpose: This script is used to daily check Oracle database
 -- Maintainers: Jet, Milo
 -- Version change and reason:
@@ -26,8 +26,7 @@
 ----
 
 
-=======-- 
->>>>>>> .theirs
+
 -- ##################################################################################
 
 
@@ -62,7 +61,7 @@
 -- ##################################################################################
 
 
-<<<<<<< .mineset echo off 
+set echo off 
 set feedback off 
 column timecol new_value timestamp 
 column spool_extension new_value suffix 
@@ -85,7 +84,6 @@ select to_char(sysdate) time from dual;
  
 set echo on 
 
-=======>>>>>>> .theirs-------------------------------
 
 -- ########################################################
 -- Part 2.1 Instance (SGA, PGA, Some parameters)
@@ -776,12 +774,8 @@ select * from v$pwfile_users;
 -- #######################################################
 
 -- Check if there is crs in RAC ( double check )
-! crs_stat -t
+! crs_stat -t 
 
-#-- #######################################################
-#-- 2013-03-05:showdump 
-#-- #######################################################
-#select value || '/' ||'alert*.log' as dump from v$parameter where name='background_dump_dest';
 
 #-- ##################################################################################
 
