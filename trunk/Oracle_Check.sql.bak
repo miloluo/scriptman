@@ -37,7 +37,7 @@
 --1. awr or statspack
 ----statspack report
 --SQL> execute statspack.snap;
---SQL> @?/rdbms/admin/spreport.sql
+--SQL> @ ?/rdbms/admin/spreport.sql
 
 ----awr report
 --SQL> exec dbms_workload_repository.create_snapshot();
@@ -60,7 +60,6 @@
 --------------Part 2: Sql Query -----------------
 -- ##################################################################################
 
--- Generate a spool file name
 
 set echo off 
 set feedback off 
@@ -85,12 +84,10 @@ select to_char(sysdate) time from dual;
  
 set echo on 
 
--------------------------------
 
 -- ########################################################
 -- Part 2.1 Instance (SGA, PGA, Some parameters)
 -- ########################################################
-
 
 -- Check instance running status
 
@@ -777,11 +774,9 @@ select * from v$pwfile_users;
 -- #######################################################
 
 -- Check if there is crs in RAC ( double check )
-! crs_stat -t
+! crs_stat -t >> 'Oracle_'||'&&dbname'||'&&timestamp'||'&&suffix' 
 
--- ##################################################################################
 
-spool off
+#-- ##################################################################################
+
 exit;
-
-
