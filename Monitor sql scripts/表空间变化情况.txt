@@ -1,0 +1,12 @@
+SELECT A.NAME, B.*
+  FROM V$TABLESPACE A,
+       (SELECT TABLESPACE_ID,
+               TRUNC(TO_DATE(RTIME, 'mm/dd/yyyy hh24:mi:ss')) DATETIME,
+               ROUND(MAX(TABLESPACE_USEDSIZE * 8 / 1024), 0) USED_SIZE
+          FROM DBA_HIST_TBSPC_SPACE_USAGE
+         WHERE TRUNC(TO_DATE(RTIME, 'mm/dd/yyyy hh24:mi:ss')) > TRUNC(SYSDATE - 30)
+         GROUP BY TABLESPACE_ID,
+                  TRUNC(TO_DATE(RTIME, 'mm/dd/yyyy hh24:mi:ss'))
+         ORDER BY TABLESPACE_ID,
+                  TRUNC(TO_DATE(RTIME, 'mm/dd/yyyy hh24:mi:ss'))) B
+ WHERE A.TS# = B.TABLESPACE_ID;

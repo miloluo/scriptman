@@ -321,9 +321,14 @@ select PARAMETER ,COUNT ,GETS ,GETMISSES ,MODIFICATIONS from v$rowcache where ca
 
 
 --10. Ó²½âÎöÇé¿ö
-select substr(SQL_TEXT,1,80),count(*) from v$sqlarea 
+set lines 200;
+col sqls for a80;
+select * from (
+select substr(SQL_TEXT,1,80) sqls,count(*) from v$sqlarea 
 group by substr(SQL_TEXT,1,80) 
-order by 2 desc;
+order by 2 desc
+)
+where rownum <= 20;
 
 select sql_id, sql_text, executions from v$sqlarea 
 where sql_text like '%SELECT "A1"."LOGIN_NO" FROM "DBCUSTADM"."DLOGINMSG" "A1" WHERE "A1"."GROUP_ID"=A%'

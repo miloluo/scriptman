@@ -1,19 +1,48 @@
 #!/bin/ksh
+# File name: get_trc.sh
+# Author: Milo Luo
+# Purpose: This script is used to get the trc file in Alert log file and ftp to your server
+# Usage: sh get_trc.sh <alert_log_location>
+# Created date: Aug 14, 2011
+# Script Update History: 
+#  v0.1 Oct 19,2011 Initialize the script and script test pass on 10g, 11g.(Milo)
+#  v0.2 Mar 08,2013 Reconstruct some msg info and estimate trace file size function has been added.(Milo)
+#  v0.3 Apr 08,2013 Add ftp target directory for uploading target.(Milo)
+#
+#
+ 
+ 
+ 
+########### NEED TO MODIFY EVERY TIME ##############
+CURRENT_YEAR='2013';
+BEGIN_MONTH='mar';
+FTP_SER='192.168.1.1';
+#FTP_SER='130.89.200.16';
+FTP_USER='fftp';
+FTP_PASSWD='fftp';
+# target directory on ftp server, modify at 2013.4
+TARGET_DIR=/
+####################################################
+ 
+ 
+ 
+#!/bin/ksh
 # Purpose: This script is used to get the trc file in Alert log file and ftp to your server
 # Usage: sh get_trc.sh <alert_log_location>
  
  
  
 ########### NEED TO MODIFY EVERY TIME ##############
-CURRENT_YEAR='2012';
-BEGIN_MONTH='dec';
-FTP_SER='192.168.1.1';
+#CURRENT_YEAR='2012';
+#BEGIN_MONTH='dec';
+#FTP_SER='192.168.20.100';
 #FTP_SER='130.89.200.16';
-FTP_USER='test';
-FTP_PASSWD='test';
+#FTP_USER='test';
+#FTP_PASSWD='test';
 ####################################################
- 
- 
+
+#### Loading the variables
+source global_env.env
  
 # Add more lines to fetched alert
 OFFSET=10;
@@ -63,15 +92,18 @@ echo '****************************' | tee -a $TMP_RUNING_LOG;
 echo `date` | tee -a $TMP_RUNING_LOG;
 echo '****************************' | tee -a $TMP_RUNING_LOG;
 echo | tee -a $TMP_RUNING_LOG;
-echo '===>Start loging for this program...' | tee -a $TMP_RUNING_LOG;
+echo;
 echo | tee -a $TMP_RUNING_LOG;
  
 # If the argument is not correct, then exit the script.
 if [ $# -lt 1 ]
 then
-    echo '===> Argument failure!' | tee -a $TMP_RUNING_LOG;   
+    echo '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
+    echo 'Argument failure!' | tee -a $TMP_RUNING_LOG;   
     echo "Missing the alert location!" | tee -a $TMP_RUNING_LOG;
     echo "Usage: sh get_trc.sh <alert_log_location>" | tee -a $TMP_RUNING_LOG ;
+    echo '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
+    echo;
     exit -1;
  
 fi;
@@ -80,11 +112,16 @@ fi;
 ######### Getting the fetched log and found trace files and tared if there is any  ###############
 
 ##### Writting the log
-echo "===> Now fetching will start from ${CURRENT_YEAR}-${BEGIN_MONTH} !!!!" | tee -a $TMP_RUNING_LOG;
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" | tee -a $TMP_RUNING_LOG;
+echo "Part1 - Analyze Trace file info" | tee -a $TMP_RUNING_LOG;
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" | tee -a $TMP_RUNING_LOG;
+echo;
+echo ">>> Now fetching will start from ${CURRENT_YEAR}-${BEGIN_MONTH} !!!!" | tee -a $TMP_RUNING_LOG;
+echo;
 
  
 #### Writing the log
-echo '===> Fetching begin line number' | tee -a $TMP_RUNING_LOG;
+echo '>>> Fetching begin line number' | tee -a $TMP_RUNING_LOG;
  
 # Fetch the begin line number in alert
 BEGIN_LINE_NUM=`grep -niE "$MATCH_EXP1" $ALERT_LOC 2> /dev/null  |awk -F: NR==1'{print $1}' 2> /dev/null`;
@@ -98,9 +135,13 @@ echo | tee -a $TMP_RUNING_LOG;
 # Judge if the BEGIN_LINE_NUM is null, if it's null, then not match result.
 if [ ${BEGIN_LINE_NUM}abc = "abc" ]
 then
-    echo '===> No records in alert' | tee -a $TMP_RUNING_LOG;
+    echo;
+    echo '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
+    echo 'No records in alert' | tee -a $TMP_RUNING_LOG;
     echo "No match result found in Alert file!" | tee -a $TMP_RUNING_LOG;
     echo "Only Alert file will upload!" | tee -a $TMP_RUNING_LOG;
+    echo '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
+    echo;
     UP_STAT=2;
 fi;
  
@@ -118,8 +159,10 @@ END_LINE_NUM=`cat -n $ALERT_LOC | tail -n 1 | awk '{print $1}'`;
 gzip -c ${ALERT_LOC} > ${ALERT_LOC}.gz | tee -a $TMP_RUNING_LOG;
  
 #### Writing the log
-echo '===> Fetching end line number' | tee -a $TMP_RUNING_LOG;
-echo "end line number: $END_LINE_NUM" | tee -a $TMP_RUNING_LOG;
+echo '>>> Fetching end line number' | tee -a $TMP_RUNING_LOG;
+echo "End line number: $END_LINE_NUM" | tee -a $TMP_RUNING_LOG;
+echo | tee -a $TMP_RUNING_LOG;
+
  
 # Write the specified log to fetch log file and add 10 more lines before specified time:
 tail -n $((${END_LINE_NUM} - ${BEGIN_LINE_NUM} + $OFFSET + 1)) $ALERT_LOC > $FETCH_LOG;
@@ -129,7 +172,8 @@ if [ $UP_STAT -eq 0 ]
 then
     # Writting the log
     echo | tee -a $TMP_RUNING_LOG;
-    echo '===> Trace file number ' | tee -a $TMP_RUNING_LOG;
+    echo '>>> Trace file number ' | tee -a $TMP_RUNING_LOG;
+    echo
  
  
     # Calulate if there is any trace file in fetched log
@@ -138,15 +182,21 @@ then
  
     # Writting the log
     echo "trace file number: $TRC_NUM" | tee -a $TMP_RUNING_LOG ; 
+    echo;
  
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" | tee -a $TMP_RUNING_LOG ;
+echo "Part2 - Collect related files info" | tee -a $TMP_RUNING_LOG ;
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" | tee -a $TMP_RUNING_LOG ;
+
     # Check if there is trace files in fetched log
- 
     if [ $TRC_NUM -eq 0 ]
     then
         # No trace file found in fetched log
-		# Writting the log
+	# Writting the log
+        echo;
         echo | tee -a $TMP_RUNING_LOG;
-        echo '===> No trace file found in fetched log, please check !' | tee -a $TMP_RUNING_LOG;
+        echo '>>> No trace file found in fetched log, please check !' | tee -a $TMP_RUNING_LOG;
+        echo;
  
         # Set upload flag to 1, only upload alert and fetched log
         UP_STAT=1;
@@ -154,9 +204,45 @@ then
     elif [ $TRC_NUM -gt 0 ]
     then
         # Found trace file in fetched log
-		# Writting the log
+	# Writting the log
         echo | tee -a $TMP_RUNING_LOG;
-        echo '===> Found trace!' | tee -a $TMP_RUNING_LOG;   
+        echo;
+        echo '>>> Found trace!' | tee -a $TMP_RUNING_LOG;   
+        echo;
+	echo;
+
+        # Estimate the size of tar pack
+        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+
+        du -sk `cat $FETCH_LOG | grep $TRC_ID2 | awk '{print $NF}' | awk -F $TRC_ID1 '{print $1}' | sed -e 's/.trc./.trc/g' | sort -u` 2> /dev/null | awk '{print $1}' | xargs 1>/dev/null
+        ret_code=$?
+        if [ $ret_code -eq 0 ]
+        then
+          echo "Estimating the size of tar pack..."
+        else
+          echo;
+          echo "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          echo "Estimate the size of tar pack failed!"
+          echo "There might be a huge file list!"
+          echo "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          echo;
+        fi
+
+        size_of_tar=0
+        for i in $(du -sk `cat $FETCH_LOG | grep $TRC_ID2 | awk '{print $NF}' | awk -F $TRC_ID1 '{print $1}' | sed -e 's/.trc./.trc/g' | sort -u` 2> /dev/null | awk '{print $1}' | xargs) 
+        do
+            size_of_tar=$(($size_of_tar+$i));
+        done;
+        echo "Totally, those trace files takeup $size_of_tar  K. ";
+
+        #size_of_tar=$(du -sk `cat $FETCH_LOG | grep $TRC_ID2 | awk '{print $NF}' | awk -F $TRC_ID1 '{print $1}' | sed -e 's/.trc./.trc/g' | sort -u`)
+        #echo "The tar file size will be : $size_of_tar K"
+        echo "Please make sure the directory you place has enough space!!!"
+        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+	echo;
+	echo;
+        sleep 5;
+
  
         echo "Taring the trace file..." | tee -a $TMP_RUNING_LOG;
         # Tar the trace files  
@@ -171,12 +257,15 @@ fi;
 ######### Upload the files according to the flag UP_STAT ###############
 # Writting the log
 echo | tee -a $TMP_RUNING_LOG;
-echo '===> FTP section ' | tee -a $TMP_RUNING_LOG;
-echo " Uploading the files..." | tee -a $TMP_RUNING_LOG;
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" | tee -a $TMP_RUNING_LOG;
+echo "Part3 - Upload the collected files" | tee -a $TMP_RUNING_LOG;
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" | tee -a $TMP_RUNING_LOG;
+echo ">>> Uploading the files..." | tee -a $TMP_RUNING_LOG;
+echo;
  
-# Check what kind of files should be uploaded
+### Check what kind of files should be uploaded
  
-# Upload all files
+### Upload all files
 if [ $UP_STAT -eq 0 ]
 then
  
@@ -184,13 +273,14 @@ ftp -i -n << EOF | tee -a $TMP_RUNING_LOG
 open $FTP_SER
 user $FTP_USER $FTP_PASSWD
 bin
+cd $TARGET_DIR
 mput $FETCH_LOG
 mput ${ALERT_LOC}.gz
 mput ${TAR_FILE_NAME}.gz
 bye
 EOF
  
-# Upload alert and fetched log
+### Upload alert and fetched log
 elif [ $UP_STAT -eq 1 ]
 then
  
@@ -198,18 +288,20 @@ ftp -i -n << EOF | tee -a $TMP_RUNING_LOG
 open $FTP_SER
 user $FTP_USER $FTP_PASSWD
 bin
+cd $TARGET_DIR
 mput $FETCH_LOG
 mput ${ALERT_LOC}.gz
 bye
 EOF
  
-# Upload alert
+### Upload alert
 else
  
 ftp -i -n << EOF | tee -a $TMP_RUNING_LOG
 open $FTP_SER
 user $FTP_USER $FTP_PASSWD
 bin
+cd $TARGET_DIR
 mput ${ALERT_LOC}.gz
 bye
  
@@ -217,41 +309,48 @@ EOF
  
 fi;
  
-# Writting the script log
+### Writting the script log
 echo | tee -a $TMP_RUNING_LOG;
 echo "Done! " | tee -a $TMP_RUNING_LOG;
 echo | tee -a $TMP_RUNING_LOG;
  
-# Print the notice
-echo ">>>>> Please do these:" | tee -a $TMP_RUNING_LOG;
-echo ">> 1. Check if there is any error in the screen" | tee -a $TMP_RUNING_LOG; 
-echo ">> 2. Check if there is 'permission denied', if so, please check if the original file is in the old dir." | tee -a $TMP_RUNING_LOG;
-echo ">> 3. Check if there is 'no such file', if so, please if MANULLY UPLOAD these files and report to script owner." | tee -a $TMP_RUNING_LOG;
+### Print the notice
+echo;
+echo '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
+echo "Please do these:" | tee -a $TMP_RUNING_LOG;
+echo "1. Check if there is any error in the screen" | tee -a $TMP_RUNING_LOG; 
+echo "2. Check if there is 'permission denied', if so, please check if the original file is in the old dir." | tee -a $TMP_RUNING_LOG;
+echo "3. Check if there is 'no such file', if so, please if MANULLY UPLOAD these files and report to script owner." | tee -a $TMP_RUNING_LOG;
+echo '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
 echo | tee -a $TMP_RUNING_LOG;
 echo | tee -a $TMP_RUNING_LOG;
  
-# Upload the script log
+### Upload the script log
 echo "Uploading the script log..." | tee -a $TMP_RUNING_LOG;
 ftp -i -n << EOF 
 open $FTP_SER
 user $FTP_USER $FTP_PASSWD
 bin
+cd $TARGET_DIR
 mput $TMP_RUNING_LOG
 bye
  
 EOF
  
 # Upload the check out file
-echo "Uploading the check out file..."
-cd /home/oracle
-ftp -i -in <<!
-open $FTP_SER
-user $FTP_USER $FTP_PASSWD
-bin
-mput *aticheck.tar 
-bye
+#echo;
+#echo;
+#echo ">>> Uploading the check out file..."
+#echo;
+#cd /home/oracle
+#ftp -i -in <<!
+#open $FTP_SER
+#user $FTP_USER $FTP_PASSWD
+#bin
+#mput *aticheck.tar 
+#bye
 
 # Remove the generate log
-echo "Removing the generated logs..."
+echo ">>> Removing the generated logs..."
 rm -f $TMP_RUNING_LOG ${TAR_FILE_NAME}.gz ${TAR_FILE_NAME} $FETCH_LOG ${ALERT_LOC}.gz
 
