@@ -73,7 +73,10 @@
 -----------------------------
 
 set echo off 
-set feedback off 
+set feedback off
+-- DON'T REMOVE NLS_DATE_LANAGE SETINGG, AS THIS MIGHT CAUSE NO OUTPUT FILE SHOW!!!!!!!!
+alter session set nls_date_language=english;
+
 column timecol new_value timestamp 
 column spool_extension new_value suffix 
 select to_char(sysdate,'Mondd_hhmi') timecol, 

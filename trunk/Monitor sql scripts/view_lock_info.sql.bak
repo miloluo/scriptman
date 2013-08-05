@@ -48,7 +48,7 @@ column owner format a9
 column LAddr heading "ID1 - ID2" format a18 
 column Lockt heading "Lock Type" format a40 
 column command format a25 
-column sid format 990 
+column sid format 9999990 
 
 select 
 nvl(S.USERNAME,'Internal') username, 
