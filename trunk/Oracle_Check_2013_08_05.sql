@@ -872,10 +872,24 @@ SELECT owner,
        enabled,
        state
   FROM dba_scheduler_jobs
- WHERE job_name = 'GATHER_STATS_JOB';
+ WHERE job_name = 'GATHER_STATS_JOB' OR job_name='BSLN_MAINTAIN_STATS_JOB';
  
 ---- for 11g
+SELECT client_name, status FROM dba_autotask_client;
+
+SET LINES 200;
+COL window_name FOR a20;
+COL client_name FOR a40;
+
+SELECT client_name,
+       window_name,
+       jobs_created,
+       jobs_started,
+       jobs_completed
+  FROM dba_autotask_client_history
+ WHERE client_name LIKE '%stats%';
  
+  
 
 -- Add from v0.1.8
 ---- Check the latest gather stats job running status
