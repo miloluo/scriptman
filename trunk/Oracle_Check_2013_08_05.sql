@@ -325,6 +325,18 @@ show parameter statistics
 
 SELECT * FROM V$VERSION;
 
+-- Check PSU version
+
+SET LINES 200;
+COL action_time FOR a30;
+COL action FOR a20;
+COL namespace FOR a15;
+COL version FOR a15;
+COL comments FOR a30;
+
+  SELECT *
+    FROM sys.registry$history
+ORDER BY 1;
 
 -- Check Archive log mode 
 
