@@ -943,20 +943,21 @@ COL device_type FOR a10;
 COL handle FOR a20;
 COL tag FOR a25;
 COL comments FOR a15;
+COL status FOR a6;
 ALTER SESSION SET nls_date_format='yyyy-mm-dd hh24:mi:ss';
 
-SELECT bs_key,
-       bp_key,
-       device_type,
-       handle,
-       tag,
-       deleted,
-       status,
-       start_time,
-       completion_time,
-       comments
-  FROM v$backup_piece_details;
-  
+  SELECT bs_key,
+         bp_key,
+         device_type,
+         handle,
+         tag,
+         deleted,
+         status,
+         start_time,
+         completion_time,
+         comments
+    FROM v$backup_piece_details
+ORDER BY start_time;
 
 -- Add from v0.1.8
 -- Recover file status
