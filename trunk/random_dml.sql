@@ -59,8 +59,6 @@ begin
             dbms_output.put_line('Loop ' || i || ' : Insert ');
             dbms_output.put_line('++++++++++++++++++++++++++++++++++++++++++++++++');
             
-  
-  
         -- Update (opcode = 1)
         elsif opcode = 1 then
             
@@ -69,14 +67,13 @@ begin
             str2 := dbms_random.string('X', 50);
             
             -- I know the rowcnt
-            sqlstmt := 'select count(*) into :1 from perf.perf_tab1 where col1 >= :2 and col1 <= :3';
-            --sqlstmt := 'select count(*) into rowcnt from perf.perf_tab1 where col1 >= :1 and col1 <= :2';
-            execute immediate sqlstmt using 'rowcnt',lowkey, highkey;
+            sqlstmt := 'select count(*) from perf.perf_tab1 where col1 >= :2 and col1 <= :3';
+            execute immediate sqlstmt into rowcnt using lowkey, highkey;
                    
             -- try max_tries times to see if there is a none empty resultset.   
             try_flag := 0;
                 
-            for i in 1..max_tries loop  
+            for j in 1..max_tries loop  
                   
                if rowcnt > 0 then
                
@@ -93,9 +90,12 @@ begin
                -- generate randkey   
                randkey := abs(mod(dbms_random.random,1000))+1 ;
                
+               lowkey := randkey - rows_before_after;
+               highkey := randkey + rows_before_after;
+
                -- I know the rowcnt
-               sqlstmt := 'select count(*) into rowcnt from perf.perf_tab1 where col1 >= :1 and col1 <= :2';
-               execute immediate sqlstmt using lowkey, highkey;               
+               sqlstmt := 'select count(1) into rowcnt from perf.perf_tab1 where col1 >= :1 and col1 <= :2';
+               execute immediate sqlstmt into rowcnt using lowkey, highkey;
             
             end loop;
             
@@ -116,11 +116,47 @@ begin
         elsif opcode = 2 then
 
 -- 添加判断是否结果集为0，如果为0，调用其他值，调用有个次数限制，如果超过该值，操作改为insert或报出delete失败。         
-            execute immediate 'delete from perf.perf_tab1 where col1 >= ' || lowkey || ' and col1 <= ' || highkey ;
-            commit;
-            dbms_output.put_line('Loop ' || i || ' : Delete ');
-            dbms_output.put_line('++++++++++++++++++++++++++++++++++++++++++++++++');
-           
+--            execute immediate 'delete from perf.perf_tab1 where col1 >= ' || lowkey || ' and col1 <= ' || highkey ;
+--            commit;
+--            dbms_output.put_line('Loop ' || i || ' : Delete ');
+--            dbms_output.put_line('++++++++++++++++++++++++++++++++++++++++++++++++');
+
+	    -- I know the rowcnt
+            sqlstmt := 'select count(*) from perf.perf_tab1 where col1 >= :2 and col1 <= :3';
+            --sqlstmt := 'select count(*) into rowcnt from perf.perf_tab1 where col1 >= :1 and col1 <= :2';
+            execute immediate sqlstmt into rowcnt using lowkey, highkey;
+
+            -- try max_tries times to see if there is a none empty resultset.   
+            try_flag := 0;
+                
+            for j in 1..max_tries loop  
+                  
+               if rowcnt > 0 then
+                  sqlstmt := 'delete from perf.perf_tab1 where col1 >= :1 and col1 <= :2 '; 
+                  execute immediate sqlstmt using lowkey, highkey ;
+                  commit;               
+                  dbms_output.put_line('Loop ' || i || ' : Delete ' || ' -> ' || rowcnt || ' records');
+                  dbms_output.put_line('++++++++++++++++++++++++++++++++++++++++++++++++'); 
+                  try_flag := 1;
+                  exit;
+               
+               end if ; 
+                  
+               -- generate randkey   
+               randkey := abs(mod(dbms_random.random,1000))+1 ;
+               lowkey := randkey - rows_before_after;
+               highkey := randkey + rows_before_after;
+               
+               -- I know the rowcnt
+               sqlstmt := 'select count(1) into rowcnt from perf.perf_tab1 where col1 >= :1 and col1 <= :2';
+               execute immediate sqlstmt into rowcnt using lowkey, highkey;
+            
+            end loop;
+               
+
+
+
+
         -- exception
         else
 
