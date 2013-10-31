@@ -55,8 +55,13 @@ begin
         if opcode = 0 then
 
 -- 添加判断是否deldata1为空，如果为空，插入行的记录。 
+
+            -- I know the rowcnt
+            select count(*) into rowcnt from perf.deldata1;
+            --execute immediate sqlstmt into rowcnt using lowkey, highkey;
+
             proc_del_data_back('perf_tab1','deldata1');
-            dbms_output.put_line('Loop ' || i || ' : Insert ');
+            dbms_output.put_line('Loop ' || i || ' : Insert '  || ' -> ' || rowcnt || ' records.' );
             dbms_output.put_line('++++++++++++++++++++++++++++++++++++++++++++++++');
             
         -- Update (opcode = 1)
@@ -80,7 +85,7 @@ begin
                   sqlstmt := 'update perf.perf_tab1 set col4 = :1 , col5 = :2  where col1 >= :3 and col1 <=  :4 ';
                   execute immediate sqlstmt using str1, str2, lowkey, highkey;
                   commit;
-                  dbms_output.put_line('Loop ' || i || ' : Update ' || ' -> ' || rowcnt || ' records');
+                  dbms_output.put_line('Loop ' || i || ' : Update ' || ' -> ' || rowcnt || ' records.');
                   dbms_output.put_line('++++++++++++++++++++++++++++++++++++++++++++++++'); 
                   try_flag := 1;
                   exit;
@@ -129,13 +134,13 @@ begin
             -- try max_tries times to see if there is a none empty resultset.   
             try_flag := 0;
                 
-            for j in 1..max_tries loop  
+            for k in 1..max_tries loop  
                   
                if rowcnt > 0 then
                   sqlstmt := 'delete from perf.perf_tab1 where col1 >= :1 and col1 <= :2 '; 
                   execute immediate sqlstmt using lowkey, highkey ;
                   commit;               
-                  dbms_output.put_line('Loop ' || i || ' : Delete ' || ' -> ' || rowcnt || ' records');
+                  dbms_output.put_line('Loop ' || i || ' : Delete ' || ' -> ' || rowcnt || ' records.');
                   dbms_output.put_line('++++++++++++++++++++++++++++++++++++++++++++++++'); 
                   try_flag := 1;
                   exit;
@@ -153,9 +158,6 @@ begin
             
             end loop;
                
-
-
-
 
         -- exception
         else
