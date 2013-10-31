@@ -32,6 +32,7 @@ order by o.object_id, xidusn desc;
 
 set lines 200 
 set pagesize 66 
+col terminal for a7;
 break on Kill on sid on  username on terminal 
 column Kill heading 'Kill String' format a13 
 column res heading 'Resource Type' format 999 
@@ -294,7 +295,7 @@ where   L.SID = S.SID
 and     T1.OBJ#  = decode(L.ID2,0,L.ID1,1)  
 and     U1.USER# = T1.OWNER# 
 and     S.TYPE != 'BACKGROUND' 
-order by 1,4,5£¬ ;
+order by 1,4,5 ;
 
 
 
