@@ -85,8 +85,6 @@ begin
         -- ################################################
         if opcode = 0 then
 
--- 添加判断是否deldata1为空，如果为空，插入行的记录。 
-
             -- I know the rowcnt
             select count(*) into rowcnt from perf.deldata1;
 	    
@@ -131,8 +129,8 @@ begin
             sqlstmt := 'select count(*) from perf.perf_tab1 where col1 >= :2 and col1 <= :3';
             execute immediate sqlstmt into rowcnt using lowkey, highkey;
                    
-
             try_flag := 0;
+
             -- try max_tries times to see if there is a none empty resultset.   
             for j in 1..max_tries loop  
                   
@@ -142,7 +140,7 @@ begin
                   execute immediate sqlstmt using str1, str2, lowkey, highkey;
                   commit;
 	          upd_cnt := upd_cnt + 1;
-                  buffer := 'Loop ' || i || ' : Update '  || ' -> ' || rowcnt || ' records.'||chr(10)|| '++++++++++++++++++++++++++++++++++++++++++++++++';
+                  buffer := 'Loop ' || i || ' : Update '  || ' -> ' || rowcnt || ' records.'||chr(10)|| lowkey || '-' || highkey || chr(10) || '++++++++++++++++++++++++++++++++++++++++++++++++';
 	          utl_file.put(fhandle,buffer);
 	          utl_file.fflush(fhandle);
                   try_flag := 1;
@@ -173,8 +171,6 @@ begin
         -- Delete (opcode = 2)
         -- ################################################
         elsif opcode = 2 then
-
--- 添加判断是否结果集为0，如果为0，调用其他值，调用有个次数限制，如果超过该值，操作改为insert或报出delete失败。         
 
 	    -- I know the rowcnt
             sqlstmt := 'select count(*) from perf.perf_tab1 where col1 >= :2 and col1 <= :3';
