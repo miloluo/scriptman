@@ -50,7 +50,6 @@ begin
         -- ## 2 -> delete
         -- ################################################
 
-        --dbms_output.put_line(chr(10)||'++++++++++++++++++++++++++++++++++++++++++++++++');
         buffer := chr(10) || chr(10) || '++++++++++++++++++++++++++++++++++++++++++++++++' || chr(10);
 	utl_file.put(fhandle,buffer);
 	utl_file.fflush(fhandle);
@@ -58,7 +57,7 @@ begin
         opcode := abs(mod(dbms_random.random,3));
 
         -- ################################################
-        -- # 2. execute the dml
+        -- # 2. Execute the Random dml
         -- ################################################
 
         -- generate randkey
@@ -69,7 +68,9 @@ begin
         -- Initialize row count
         rowcnt := -1;
 
+        -- ################################################
         -- Insert (opcode = 0)
+        -- ################################################
         if opcode = 0 then
 
 -- 添加判断是否deldata1为空，如果为空，插入行的记录。 
@@ -78,14 +79,14 @@ begin
             select count(*) into rowcnt from perf.deldata1;
 
             proc_del_data_back('perf_tab1','deldata1');
-            --dbms_output.put_line('Loop ' || i || ' : Insert '  || ' -> ' || rowcnt || ' records.' );
-            --dbms_output.put_line('++++++++++++++++++++++++++++++++++++++++++++++++');
 	    ins_cnt := ins_cnt + 1;
             buffer := 'Loop ' || i || ' : Insert '  || ' -> ' || rowcnt || ' records.'||chr(10)|| '++++++++++++++++++++++++++++++++++++++++++++++++';
 	    utl_file.put(fhandle,buffer);
 	    utl_file.fflush(fhandle);
             
+        -- ################################################
         -- Update (opcode = 1)
+        -- ################################################
         elsif opcode = 1 then
             
             -- random strings
@@ -94,7 +95,6 @@ begin
             
             -- I know the rowcnt
             sqlstmt := 'select count(*) from perf.perf_tab1 where col1 >= :2 and col1 <= :3';
-	    --dbms_output.put_line(sqlstmt || chr(10) || 'rowcnt: ' || rowcnt || chr(10) || 'lowkey: ' || lowkey || chr(10) || 'highkey: ' || highkey);
             execute immediate sqlstmt into rowcnt using lowkey, highkey;
                    
 
@@ -107,8 +107,6 @@ begin
                   sqlstmt := 'update perf.perf_tab1 set col4 = :1 , col5 = :2  where col1 >= :3 and col1 <=  :4 ';
                   execute immediate sqlstmt using str1, str2, lowkey, highkey;
                   commit;
-                  --dbms_output.put_line('Loop ' || i || ' : Update ' || ' -> ' || rowcnt || ' records.');
-                  --dbms_output.put_line('++++++++++++++++++++++++++++++++++++++++++++++++'); 
 	          upd_cnt := upd_cnt + 1;
                   buffer := 'Loop ' || i || ' : Update '  || ' -> ' || rowcnt || ' records.'||chr(10)|| '++++++++++++++++++++++++++++++++++++++++++++++++';
 	          utl_file.put(fhandle,buffer);
@@ -125,29 +123,27 @@ begin
 
                -- I know the rowcnt
                sqlstmt := 'select count(1)  from perf.perf_tab1 where col1 >= :1 and col1 <= :2';
-	       --dbms_output.put_line(sqlstmt || chr(10) || 'rowcnt: ' || rowcnt || chr(10) || 'lowkey: ' || lowkey || chr(10) || 'highkey: ' || highkey);
                execute immediate sqlstmt into rowcnt using lowkey, highkey;
             
             end loop;
             
             -- if no resultset match after $max_tries time, then output update failed     
             if try_flag = 0 then 
-                  --dbms_output.put_line('Loop ' || i || ' : Update failed after try ' ||  max_tries || ' times!');
-                  --dbms_output.put_line('++++++++++++++++++++++++++++++++++++++++++++++++'); 
                   buffer := 'Loop ' || i || ' : Update failed after try ' ||  max_tries || ' times!' || chr(10) || '++++++++++++++++++++++++++++++++++++++++++++++++';
 	          utl_file.put(fhandle,buffer);
 	          utl_file.fflush(fhandle);
             end if;
             
             
+        -- ################################################
         -- Delete (opcode = 2)
+        -- ################################################
         elsif opcode = 2 then
 
 -- 添加判断是否结果集为0，如果为0，调用其他值，调用有个次数限制，如果超过该值，操作改为insert或报出delete失败。         
 
 	    -- I know the rowcnt
             sqlstmt := 'select count(*) from perf.perf_tab1 where col1 >= :2 and col1 <= :3';
-	    --dbms_output.put_line(sqlstmt || chr(10) || 'rowcnt: ' || rowcnt || chr(10) || 'lowkey: ' || lowkey || chr(10) || 'highkey: ' || highkey);
             execute immediate sqlstmt into rowcnt using lowkey, highkey;
 
             -- try max_tries times to see if there is a none empty resultset.   
@@ -159,8 +155,6 @@ begin
                   sqlstmt := 'delete from perf.perf_tab1 where col1 >= :1 and col1 <= :2 '; 
                   execute immediate sqlstmt using lowkey, highkey ;
                   commit;               
-                  --dbms_output.put_line('Loop ' || i || ' : Delete ' || ' -> ' || rowcnt || ' records.');
-                  --dbms_output.put_line('++++++++++++++++++++++++++++++++++++++++++++++++'); 
                   buffer := 'Loop ' || i || ' : Delete '  || ' -> ' || rowcnt || ' records.'||chr(10) ||'++++++++++++++++++++++++++++++++++++++++++++++++';
 	          utl_file.put(fhandle,buffer);
 	          utl_file.fflush(fhandle);
@@ -177,29 +171,29 @@ begin
                
                -- I know the rowcnt
                sqlstmt := 'select count(1) from perf.perf_tab1 where col1 >= :1 and col1 <= :2';
-	       --dbms_output.put_line(sqlstmt || chr(10) || 'rowcnt: ' || rowcnt || chr(10) || 'lowkey: ' || lowkey || chr(10) || 'highkey: ' || highkey);
                execute immediate sqlstmt into rowcnt using lowkey, highkey;
             
             end loop;
                
             -- if no resultset match after $max_tries time, then output delete failed     
             if try_flag = 0 then 
-                  --dbms_output.put_line('Loop ' || i || ' : Delete failed after try ' ||  max_tries || ' times!');
-                  --dbms_output.put_line('++++++++++++++++++++++++++++++++++++++++++++++++'); 
                   buffer := 'Loop ' || i || ' : Delete failed after try ' ||  max_tries || ' times!' || chr(10) || '++++++++++++++++++++++++++++++++++++++++++++++++';
 	          utl_file.put(fhandle,buffer);
 	          utl_file.fflush(fhandle);
             end if;
 
-        -- exception
+        -- ################################################
+        -- Random Number Exception
+        -- ################################################
         else
-
-                  --dbms_output.put_line('Exception occur!!!');
+                  -- random number exception
                   buffer := 'Exception occur!!!';
 	          utl_file.put(fhandle,buffer);
 	          utl_file.fflush(fhandle);
+		
 		  -- close fd
                   utl_file.fclose(fhandle);
+
 		  -- exit the program
 		  exit;
 
@@ -218,23 +212,28 @@ begin
     utl_file.put(fhandle,buffer);
     utl_file.fflush(fhandle);
     
-    buffer := chr(10) || 'Total executes ' || total_dml_cnt || ' times.';
+    buffer := chr(10) || 
+              'Total executes ' || total_dml_cnt || ' times.';
     utl_file.put(fhandle,buffer);
     utl_file.fflush(fhandle);
 
-    buffer := chr(10) || 'INSERT executes ' || ins_cnt || ' times.';
+    buffer := chr(10) || 
+              'INSERT executes ' || ins_cnt || ' times.';
     utl_file.put(fhandle,buffer);
     utl_file.fflush(fhandle);
 
-    buffer := chr(10) || 'UPDATE executes ' || upd_cnt || ' times.';
+    buffer := chr(10) || 
+              'UPDATE executes ' || upd_cnt || ' times.';
     utl_file.put(fhandle,buffer);
     utl_file.fflush(fhandle);
 
-    buffer := chr(10) || 'DELETE executes ' || del_cnt || ' times.';
+    buffer := chr(10) || 
+              'DELETE executes ' || del_cnt || ' times.';
     utl_file.put(fhandle,buffer);
     utl_file.fflush(fhandle);
 
-    buffer := chr(10) || 'RANDOM DML COMPELETE SUCESSFULLY!' || chr(10); 
+    buffer := chr(10) || 
+              'RANDOM DML COMPELETE SUCESSFULLY!' || chr(10); 
     utl_file.put(fhandle,buffer);
     utl_file.fflush(fhandle);
 
