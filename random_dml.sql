@@ -11,31 +11,43 @@ is
   -- dml manipulate row source
   rowcnt number;
 
+  -- insert new data string
+  tmp_col1 number;
+  tmp_col2 number;
+  tmp_col3 date;
+  tmp_col4 varchar2(30);
+  tmp_col5 varchar2(50);
+
   -- sql statment 
   sqlstmt varchar2(4000);
  
   -- two random strings
   str1 varchar2(30);
   str2 varchar2(50);
-  
-  -- in $max_tries times, if the specific dml opeartion is ok.
-  try_flag number := 0;
-
-  -- define output logfile name
-  logname varchar2(200) := 'rand_dml.log';
 
   -- define dml type counter
   del_cnt number := 0;
   ins_cnt number := 0;
   upd_cnt number := 0;
-
+  
   -- define write log handler
   fhandle utl_file.file_type;
   buffer varchar2(1000);
 
+  -- in $max_tries times, if the specific dml opeartion is ok.
+  try_flag number := 0;
+
+  -- max insert times
+  instime number := 0; 
+
+--############ User Defined Variable ##############################
+  -- define output logfile name
+  logname varchar2(200) := 'rand_dml.log';
+
   -- define fetch the how much lines before and after from keys
   rows_before_after number := 10 ;
   max_tries number := 10;
+--#################################################################
 
 begin
 
@@ -77,8 +89,30 @@ begin
 
             -- I know the rowcnt
             select count(*) into rowcnt from perf.deldata1;
+	    
+	    -- if the rowcnt equal to zero, then insert some data
+            if rowcnt > 0 then
+               proc_del_data_back('perf_tab1','deldata1');
+	    else
+	       instime := abs(mod(dbms_random.random,2*rows_before_after)) + 2;
+	       dbms_output.put_line('From new insert' || instime);
 
-            proc_del_data_back('perf_tab1','deldata1');
+
+	       for z in 1..instime loop
+                   -- random strings
+	           tmp_col1 := seq1.nextval;
+                   tmp_col2 := trunc(dbms_random.value(1,2)*1000000000+1);
+	           tmp_col3 := to_date(sysdate-trunc(mod(dbms_random.value(1,2)*1000000000,365)),'yyyy-mm-dd');
+	           tmp_col4 := dbms_random.string('A', 30);
+	           tmp_col5 := dbms_random.string('X', 50);
+		    
+		   -- insert random value base on the sequence
+		   sqlstmt := 'insert into perf.perf_tab1 values( :1 ,:2 , :3 , :4 , :5  )';
+		   execute immediate sqlstmt using tmp_col1, tmp_col2, tmp_col3, tmp_col4, tmp_col5; 
+	       end loop;
+	       rowcnt := instime;
+	    end if;
+
 	    ins_cnt := ins_cnt + 1;
             buffer := 'Loop ' || i || ' : Insert '  || ' -> ' || rowcnt || ' records.'||chr(10)|| '++++++++++++++++++++++++++++++++++++++++++++++++';
 	    utl_file.put(fhandle,buffer);
