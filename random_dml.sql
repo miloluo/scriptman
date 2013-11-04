@@ -1,4 +1,21 @@
+---  Description:
+---  Orgnize the dml operations via random executions
+--- 
+---  Script Author:
+---  Milo Luo from System Maintenance Services (Beijing) Technology Ltd(Auto Tech (Beijing) Technology Co., Ltd)
+---
+---  Script Update:
+---  Date           Modifier               Comments
+---  ------------   -------------------    -------------------------------------------------------
+---  Oct.31 2013    Milo Luo               Initial the script
+---  Nov.02 2013    Milo Luo               Modify the insert part
+---
+--- 
+---
+
+
 create or replace procedure rand_dml(total_dml_cnt IN number)
+--create or replace procedure rand_dml(total_dml_cnt IN number, tabname IN varchar2, insbaktab IN varchar2)
 is
   -- define dml type code
   opcode number;
@@ -87,10 +104,15 @@ begin
 
             -- I know the rowcnt
             select count(*) into rowcnt from perf.deldata1;
+            --execute immediate 'select count(*) into rowcnt from :1.:2' using tabowner, tabname;
+            --sqlstmt := 'select count(*) from :1';
+            --execute immediate 'select count(*) into rowcnt from ' ||  tabowner || '.' || tabname;
+            --execute immediate sqlstmt returning into rowcnt using tabname;
 	    
 	    -- if the rowcnt equal to zero, then insert some data
             if rowcnt > 0 then
                proc_del_data_back('perf_tab1','deldata1');
+	       --dbms_output.put_line('call procedure!');
 	    else
 	       instime := abs(mod(dbms_random.random,2*rows_before_after)) + 2;
 	       dbms_output.put_line('From new insert' || instime);
@@ -140,7 +162,8 @@ begin
                   execute immediate sqlstmt using str1, str2, lowkey, highkey;
                   commit;
 	          upd_cnt := upd_cnt + 1;
-                  buffer := 'Loop ' || i || ' : Update '  || ' -> ' || rowcnt || ' records.'||chr(10)|| lowkey || '-' || highkey || chr(10) || '++++++++++++++++++++++++++++++++++++++++++++++++';
+                  --buffer := 'Loop ' || i || ' : Update '  || ' -> ' || rowcnt || ' records.'||chr(10)|| lowkey || '-' || highkey || chr(10) || '++++++++++++++++++++++++++++++++++++++++++++++++';
+                  buffer := 'Loop ' || i || ' : Update '  || ' -> ' || rowcnt || ' records.'||chr(10)|| '++++++++++++++++++++++++++++++++++++++++++++++++';
 	          utl_file.put(fhandle,buffer);
 	          utl_file.fflush(fhandle);
                   try_flag := 1;
