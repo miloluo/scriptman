@@ -340,3 +340,27 @@ group by substr(SQL_TEXT,1,80)
 order by 2 desc )
 where rownum <=10;
 
+
+
+
+SET LINESIZE 200
+
+COLUMN username FORMAT A15
+
+SELECT s.username,
+       s.sid,
+       s.serial#,
+       t.used_ublk,
+       t.used_urec,
+       rs.segment_name,
+       r.rssize,
+       r.status
+FROM   v$transaction t,
+       v$session s,
+       v$rollstat r,
+       dba_rollback_segs rs
+WHERE  s.saddr = t.ses_addr
+AND    t.xidusn = r.usn
+AND    rs.segment_id = t.xidusn
+ORDER BY t.used_ublk DESC;
+
