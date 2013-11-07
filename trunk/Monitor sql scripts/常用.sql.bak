@@ -322,7 +322,7 @@ select PARAMETER ,COUNT ,GETS ,GETMISSES ,MODIFICATIONS from v$rowcache where ca
 
 --10. Ó²½âÎöÇé¿ö
 set lines 200;
-col sql
+col sqls for a80;
 select * from (
 select substr(SQL_TEXT,1,80) sqls,count(*) from v$sqlarea 
 group by substr(SQL_TEXT,1,80) 
