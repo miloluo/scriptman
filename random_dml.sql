@@ -14,7 +14,6 @@
 ---  Nov.05 2013    Milo Luo               Improve the randky algorithm.
 ---  Nov.05 2013    Milo Luo               Improve the Scalability.
 ---  Nov.08 2013    Milo Luo               Add logfile columns for scalability.
----  Nov.11 2013    Milo Luo               Perfmance improve on max(col1), max(col1)
 ---
 --- 
 
@@ -112,10 +111,8 @@ begin
         -- ################################################
 
         -- generate randkey
-        sqlstmt := 'select max(col1) from ' || tabname;
-	execute immediate sqlstmt into maxkey;
-        sqlstmt := 'select min(col1) from ' || tabname;
-	execute immediate sqlstmt into minkey;
+        sqlstmt := 'select max(col1),min(col1) from ' || tabname;
+	execute immediate sqlstmt into maxkey,minkey;
         randkey := abs(mod(dbms_random.random,maxkey-minkey)) + minkey + 1;
 
         lowkey := randkey - rows_before_after;
