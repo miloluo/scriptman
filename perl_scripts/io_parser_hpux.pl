@@ -7,12 +7,13 @@
 # ------------- ------------- -----------------------------------------------------
 # Nov.08 2013   Milo Luo      Initialize the script.
 # Nov.15 2013   Milo Luo      Replace variables with hard code on disks.
-#
+# Nov.16 2013   Milo Luo      Add the configure file
 #
 #
 
 
 use strict;
+#use  diagnostics;
 use Win32::OLE qw(in with);
 use Win32::OLE::Const 'Microsoft Excel';
 
@@ -22,31 +23,34 @@ $Win32::OLE::Warn = 3;    # die on errors...
 my $fname=$ARGV[0];
 
 # Define the config file 
-my $conffile="H:/data/excel_research/config.cfg";
+my $conf="H:/data/excel_research/config.cfg";
+
+# line contents
+my $line = "";
 
 # Define the disks you care about on iostat file.
 my %mydisk;
 
-# Red configure file to get which disks you care about
-if (open(FH1,"< $conffile") or die "Can NOT open configure file: $conffile !")
-{
-	# Read the configure file  
-	while (my $line = <FH1>) {
-		if ((split(/\s+/,$line))[1] =~ m/disk/) {
-			$mydisk{(split(/\s+/,$line))[1]} = 0;
-		}	
-	
-	} 
+# Read configure file to get which disks you care about
+#if (open(FH1,"< $conf") or die "Can NOT open configure file: $conf !")
+open(FH1,"< $conf") or die "Can NOT open configure file: $conf !";
 
-	# Close File Header
-	close(FH1);
-}
+# Read the configure file  
+while ($line = <FH1>) {
+	next if ($line =~ m/^\s*$/);
+	if ((split(/\s+/,$line))[1] =~ m/disk/) {
+		$mydisk{(split(/\s+/,$line))[1]} = 0;
+	}
+
+} 
+
+# Close File Header
+close(FH1);
+
 
 # Iostat file row count
 my $cnt = 0;
 
-# line contents
-my $line = "";
 
 # time lines
 my $minus ="";
@@ -71,17 +75,22 @@ my $Sheet = $Book->Worksheets(1);
 my $size += scalar keys %mydisk;
 my @diskname = keys %mydisk;
 
+print @diskname;
+
 # Define 2nd row as real iostat data write to , because row #1 will always be time lines
 my $rows = 2;
 
 # Open the iostat file and begin read and filter data
-if (open(FH2, "< $fname") )
+if ( open(FH2, "< $fname") )
 {
+	$line = "";
 
 	# Begin fill data
 	while ($line = <FH2>) { 
 	        $cnt += 1;
 		print "Processing $cnt lines.\n";
+		next if ($line =~ m/^\s*$/);
+		
 		if ($line =~ m/\d{2}:\d{2}:\d{2}/ && $init_flag == 0){
 
 			for ($rows=2; $rows<= $size+1; $rows++) {
@@ -102,9 +111,9 @@ if (open(FH2, "< $fname") )
 			$minus = (split(/\s+/,$line))[4];
 		}
 		elsif ($line =~ m/disk/) {
+			# store a group of values
 			if ( exists($mydisk{(split(/\s+/,$line))[1]}) ) {
 				$mydisk{(split(/\s+/,$line))[1]} = (split(/\s+/,$line))[2];
-				
 			}
 			
 		}
@@ -113,12 +122,15 @@ if (open(FH2, "< $fname") )
 		}
 
 	}	
+
+	# last flush
 	$Sheet->Cells(1,$col)->{'Value'}="$minus";
 
 	for ($rows=2; $rows<= $size+1; $rows++) {
 		$Sheet->Cells($rows,$col)->{'Value'}="$mydisk{$diskname[$rows-2]}";
 	}
 	close(FH2);
+
         # clean up after ourselves
 	$Book -> Save;
         $Book->Close;
