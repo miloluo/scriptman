@@ -5,12 +5,13 @@
 #
 # Date          Modifier      Comments
 # ------------- ------------- -----------------------------------------------------
+# Nov.08 2013   Milo Luo      Initialize the script.
+# Nov.15 2013   Milo Luo      Replace variables with hard code on disks.
 #
 #
 #
-#
-#
-#
+
+
 use strict;
 use Win32::OLE qw(in with);
 use Win32::OLE::Const 'Microsoft Excel';
@@ -18,26 +19,36 @@ use Win32::OLE::Const 'Microsoft Excel';
 $Win32::OLE::Warn = 3;    # die on errors...
 
 # Define the iostat data filename in HPUX
-#my $fname="test2_iostat_13.11.05.1300.dat";
-#my $fname="test2_iostat_13.11.05.1400.dat";
-#my $fname="test2_iostat_13.11.05.1200.dat";
 my $fname=$ARGV[0];
 
-my %mydisk = (
-	"disk3"  => 0,
-	"disk5"  => 0,
-	"disk19" => 0,
-	"disk20" => 0,
-	"disk21" => 0,
-	"disk24" => 0,
-	"disk25" => 0
-);
+# Define the config file 
+my $conffile="H:/data/excel_research/config.cfg";
 
+# Define the disks you care about on iostat file.
+my %mydisk;
 
+# Red configure file to get which disks you care about
+if (open(FH1,"< $conffile") or die "Can NOT open configure file: $conffile !")
+{
+	# Read the configure file  
+	while (my $line = <FH1>) {
+		if ((split(/\s+/,$line))[1] =~ m/disk/) {
+			$mydisk{(split(/\s+/,$line))[1]} = 0;
+		}	
+	
+	} 
+
+	# Close File Header
+	close(FH1);
+}
+
+# Iostat file row count
 my $cnt = 0;
 
 # line contents
 my $line = "";
+
+# time lines
 my $minus ="";
 
 # if it's the init step or not
@@ -50,29 +61,32 @@ my $col=1;
 my $Excel = Win32::OLE->GetActiveObject('Excel.Application')
     	|| Win32::OLE->new('Excel.Application', 'Quit');  
 
+
+
 # open Excel file
 my $Book = $Excel->Workbooks->Open("h:/data/excel_research/test1.xls"); 
 my $Sheet = $Book->Worksheets(1);
 
+# Aquired the hash size and diskname
+my $size += scalar keys %mydisk;
+my @diskname = keys %mydisk;
+
+# Define 2nd row as real iostat data write to , because row #1 will always be time lines
+my $rows = 2;
 
 # Open the iostat file and begin read and filter data
-if (open(FH, "< $fname") )
+if (open(FH2, "< $fname") )
 {
 
 	# Begin fill data
-	while ($line = <FH>) { 
+	while ($line = <FH2>) { 
 	        $cnt += 1;
 		print "Processing $cnt lines.\n";
 		if ($line =~ m/\d{2}:\d{2}:\d{2}/ && $init_flag == 0){
 
-			### init the colmun title
-   			$Sheet->Cells(2,$col)->{'Value'}="disk3";
-   			$Sheet->Cells(3,$col)->{'Value'}="disk5";
-   			$Sheet->Cells(4,$col)->{'Value'}="disk19";
-   			$Sheet->Cells(5,$col)->{'Value'}="disk20";
-   			$Sheet->Cells(6,$col)->{'Value'}="disk21";
-   			$Sheet->Cells(7,$col)->{'Value'}="disk24";
-   			$Sheet->Cells(8,$col)->{'Value'}="disk25";
+			for ($rows=2; $rows<= $size+1; $rows++) {
+   				$Sheet->Cells($rows,$col)->{'Value'}=$diskname[$rows-2];
+			}
 			$col += 1;
 			$init_flag=1;
 			$minus = (split(/\s+/,$line))[4];
@@ -80,18 +94,18 @@ if (open(FH, "< $fname") )
 		elsif ($line =~ m/\d{2}:\d{2}:\d{2}/ && $init_flag == 1){
 			# First flush the former result
    			$Sheet->Cells(1,$col)->{'Value'}="$minus";
-   			$Sheet->Cells(2,$col)->{'Value'}="$mydisk{'disk3'}";
-   			$Sheet->Cells(3,$col)->{'Value'}="$mydisk{'disk5'}";
-   			$Sheet->Cells(4,$col)->{'Value'}="$mydisk{'disk19'}";
-   			$Sheet->Cells(5,$col)->{'Value'}="$mydisk{'disk20'}";
-   			$Sheet->Cells(6,$col)->{'Value'}="$mydisk{'disk21'}";
-   			$Sheet->Cells(7,$col)->{'Value'}="$mydisk{'disk24'}";
-   			$Sheet->Cells(8,$col)->{'Value'}="$mydisk{'disk25'}";
+
+			for ($rows=2; $rows<= $size+1; $rows++) {
+				$Sheet->Cells($rows,$col)->{'Value'}="$mydisk{$diskname[$rows-2]}";
+			}
 			$col += 1;
 			$minus = (split(/\s+/,$line))[4];
 		}
 		elsif ($line =~ m/disk/) {
-			$mydisk{(split(/\s+/,$line))[1]} = (split(/\s+/,$line))[2];
+			if ( exists($mydisk{(split(/\s+/,$line))[1]}) ) {
+				$mydisk{(split(/\s+/,$line))[1]} = (split(/\s+/,$line))[2];
+				
+			}
 			
 		}
 		else {
@@ -100,14 +114,11 @@ if (open(FH, "< $fname") )
 
 	}	
 	$Sheet->Cells(1,$col)->{'Value'}="$minus";
-	$Sheet->Cells(2,$col)->{'Value'}="$mydisk{'disk3'}";
-	$Sheet->Cells(3,$col)->{'Value'}="$mydisk{'disk5'}";
-	$Sheet->Cells(4,$col)->{'Value'}="$mydisk{'disk19'}";
-	$Sheet->Cells(5,$col)->{'Value'}="$mydisk{'disk20'}";
-	$Sheet->Cells(6,$col)->{'Value'}="$mydisk{'disk21'}";
-	$Sheet->Cells(7,$col)->{'Value'}="$mydisk{'disk24'}";
-	$Sheet->Cells(8,$col)->{'Value'}="$mydisk{'disk25'}";
-	close(FH);
+
+	for ($rows=2; $rows<= $size+1; $rows++) {
+		$Sheet->Cells($rows,$col)->{'Value'}="$mydisk{$diskname[$rows-2]}";
+	}
+	close(FH2);
         # clean up after ourselves
 	$Book -> Save;
         $Book->Close;
@@ -115,7 +126,7 @@ if (open(FH, "< $fname") )
 else
 {
 	printf("File doesn't exist!!!!");
-	close(FH);
+	close(FH2);
         # clean up after ourselves
         $Book->Close;
 	exit -2;
