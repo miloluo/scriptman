@@ -7,16 +7,18 @@
 # ------------- ------------- -----------------------------------------------------
 # Nov.08 2013   Milo Luo      Initialize the script.
 # Nov.15 2013   Milo Luo      Replace variables with hard code on disks.
-# Nov.16 2013   Milo Luo      Add the configure file
+# Nov.16 2013   Milo Luo      Add the configure file.
+# Nov.17 2013   Milo Luo      Add auto-plotted trend lines.
 #
 #
 
 
 use strict;
-use  diagnostics;
+#use  diagnostics;
 use Win32::OLE qw(in with);
 use Win32::OLE::Const 'Microsoft Excel';
 use Excel::Writer::XLSX;
+use Excel::Writer::XLSX::Utility;
 
 $Win32::OLE::Warn = 3;    # die on errors...
 
@@ -33,7 +35,6 @@ my $line = "";
 my %mydisk;
 
 # Read configure file to get which disks you care about
-#if (open(FH1,"< $conf") or die "Can NOT open configure file: $conf !")
 open(FH1,"< $conf") or die "Can NOT open configure file: $conf !";
 
 # Read the configure file  
@@ -48,7 +49,6 @@ while ($line = <FH1>) {
 # Close File Header
 close(FH1);
 
-
 # Iostat file row count
 my $cnt = 0;
 
@@ -62,23 +62,15 @@ my $init_flag = 0;
 # begin column
 my $col=0;
 
-# get already active Excel application or open new
-#my $Excel = Win32::OLE->GetActiveObject('Excel.Application')
-#    	|| Win32::OLE->new('Excel.Application', 'Quit');  
-
-my $Excel =  Excel::Writer::XLSX->new('chart_line.xlsx');
+# Open a Excel (xlsx format) for resultset.
+my $Excel =  Excel::Writer::XLSX->new('iostat_result1.xlsx');
 my $Sheet =  $Excel-> add_worksheet();
-
-
-# open Excel file
-#my $Book = $Excel->Workbooks->Open("h:/data/excel_research/test1.xls"); 
-#my $Sheet = $Book->Worksheets(1);
 
 # Aquired the hash size and diskname
 my $size += scalar keys %mydisk;
 my @diskname = keys %mydisk;
 
-print @diskname;
+#print @diskname;
 
 # Define 2nd row as real iostat data write to , because row #1 will always be time lines
 my $rows = 2;
@@ -97,8 +89,6 @@ if ( open(FH2, "< $fname") )
 		if ($line =~ m/\d{2}:\d{2}:\d{2}/ && $init_flag == 0){
 
 			for ($rows=1; $rows<= $size; $rows++) {
-				#$Sheet->Cells($rows,$col)->{'Value'}=$diskname[$rows-2];
-				#$Sheet->write($rows,$col,$diskname[$rows-2]);
    				$Sheet->write($rows,$col,$diskname[$rows-1]);
 			}
 			$col += 1;
@@ -107,12 +97,9 @@ if ( open(FH2, "< $fname") )
 		}
 		elsif ($line =~ m/\d{2}:\d{2}:\d{2}/ && $init_flag == 1){
 			# First flush the former result
-			#$Sheet->Cells(1,$col)->{'Value'}="$minus";
    			$Sheet->write(0,$col,$minus);
 
 			for ($rows=1; $rows<= $size; $rows++) {
-				#$Sheet->Cells($rows,$col)->{'Value'}="$mydisk{$diskname[$rows-2]}";
-				#$Sheet->write($rows,$col,$mydisk{$diskname[$rows-2]});
    				$Sheet->write($rows,$col,$mydisk{$diskname[$rows-1]});
 			}
 			$col += 1;
@@ -132,13 +119,35 @@ if ( open(FH2, "< $fname") )
 	}	
 
 	# last flush
-	#$Sheet->Cells(1,$col)->{'Value'}="$minus";
    	$Sheet->write(0,$col,$minus);
 
 	for ($rows=1; $rows<= $size; $rows++) {
-		#$Sheet->Cells($rows,$col)->{'Value'}="$mydisk{$diskname[$rows-2]}";
    		$Sheet->write($rows,$col,$mydisk{$diskname[$rows-1]});
 	}
+
+	# Add a chart object
+	my $chart = $Excel -> add_chart( type  => 'line', embedded => 1);
+	my $colname = xl_col_to_name($col);
+	print "\n","column name is ", $colname, "\n";
+
+	# Add a chart title and some axis labels.
+	$chart -> set_title ( name => 'Results of iostat analysis on hpux' );
+	$chart -> set_x_axis( name => 'Time Lines' );
+	$chart -> set_y_axis( name => 'Kilobytes Per Second(bps)' );
+
+	# Set an Excel chart style. Colors with white outline and shadow.
+	#$chart -> add_series( values => '=Sheet1!$B$2:$E$2', trendline => {type => 'linear'} );
+	$chart -> set_style( 2 );
+	for ($rows=1; $rows<= $size; $rows++) {
+		#$chart -> add_series( name => 'disk1', categories => 'Sheet1!$A$1:$ASC$1', values => '=Sheet1!$B$2:$ASC$2' );
+		my $tmp_rl=$rows+1;
+		$chart -> add_series( name => $diskname[$rows-1], categories => 'Sheet1!$B$1:$'.$colname.'$'.$rows, values => '=Sheet1!$B'.'$'.$tmp_rl.':$'.$colname.'$'.$tmp_rl );
+		print $diskname[$rows-1],"\n";
+	}
+
+	# Insert the chart into the worksheet (with an offset).
+	#$worksheet->insert_chart( 'D2', $chart, 25, 10 );
+	$Sheet ->insert_chart( "D10", $chart, 25, 10 );
 	close(FH2);
 
         # clean up after ourselves
@@ -152,3 +161,5 @@ else
 	$Excel ->close();
 	exit -2;
 }
+
+
