@@ -1,0 +1,142 @@
+create or replace procedure proc_mvtest2(lname varchar2, dname varchar2, maxloop number default 1)
+-- For test BF_EVT_DEP_SAP_2012 table
+is
+	 t1 date;
+	 t2 date;
+	 diff_t number;
+
+	 fhandle utl_file.file_type;
+	 fhandle1 utl_file.file_type;
+	 buffer varchar2(4000);
+	 logname varchar2(1000) := lname;
+	 max_loop number := maxloop;
+	
+	 date_fname varchar2(1000) := dname;
+	 type date_type is table of varchar2(100) index by pls_integer;
+         v_date date_type;
+         v_last number := 0;
+         v_record number := 100;
+begin
+
+    -- read the date file to fetch delimiter date
+    fhandle1 := utl_file.fopen('CONF_DIR',date_fname,'r', 30);
+    
+    LOOP
+       begin 
+          utl_file.get_line(fhandle1, buffer, 30);
+             v_last := v_last+1;
+             v_date(v_last) := buffer;     
+    
+       exception
+          when no_data_found then
+          exit;
+       end;
+    END LOOP;  
+    utl_file.fclose(fhandle1);   
+  
+    -- check every date file
+    --for i in 1..v_last loop
+    --    dbms_output.put_line(v_date(i));
+    --end loop;
+    --dbms_output.put_line('+++++++++++++++++++++++++++++++');  
+    dbms_output.put_line('Max element number: ' || v_last);  
+   
+
+
+
+    -- open logfile for writing logs
+    fhandle := utl_file.fopen('MVLOG',logname,'w',1000);
+    buffer := chr(10) || '++++++++++++++++++++++++++++++++++++++++++++++++' || chr(10) || 'Table - BF_EVT_DEP_SAP_2012'  ||chr(10)|| '++++++++++++++++++++++++++++++++++++++++++++++++'||chr(10);
+    utl_file.put_line(fhandle, buffer, TRUE);
+
+    -- begin execute the dml and refresh mveiw
+    for i in 1..max_loop 
+    loop
+      
+         -- init the around records
+         v_record := 100;
+
+	 -- go through the date file
+	 for k in 1..v_last loop
+             --dbms_output.put_line(v_date(i));
+             buffer := '++++++++++++++++++++ Loop ' || i || ' with ' || v_record || ' w +++++++++++++++++++++++++++';
+	     utl_file.put_line(fhandle, buffer, TRUE); 
+             --dbms_output.put_line('insert /*+ parallel(deldata2 8) */ into deldata2 select * from BF_EVT_DEP_SAP_2012 where sa_tx_dt <= ' || v_date(i));
+             ---------------------------
+ 	     -- begin backup time 
+ 	     ---------------------------
+             --insert /*+ parallel(deldata2 8) */ into deldata2 select * from BF_EVT_DEP_SAP_2012 where sa_tx_dt <= '2012-01-04';
+	     select sysdate into t1 from dual;
+             execute immediate 'insert /*+ parallel(deldata2 8) */ into deldata2 select * from BF_EVT_DEP_SAP_2012 where sa_tx_dt <= ' || v_date(k);
+             -- end time
+	     select sysdate into t2 from dual;
+      
+	     -- calculating the backup delete data time
+ 	     select round((t2-t1)*86400,2) into diff_t from dual;	
+	     buffer := ' - Backup delete data Time: ' || diff_t || ' second.';
+	     utl_file.put_line(fhandle, buffer, TRUE);           
+ 
+             ----------------------------- 
+             -- begin delete time          
+             ----------------------------- 
+	     select sysdate into t1 from dual;           
+             execute immediate 'delete /*+ parallel(BF_EVT_DEP_SAP_2012 8) */ from BF_EVT_DEP_SAP_2012 where sa_tx_dt <= ' || v_date(k);
+             commit;
+             -- end time
+	     select sysdate into t2 from dual;
+        
+	     -- calculating the delete data time
+	     select round((t2-t1)*86400,2) into diff_t from dual;	
+	     buffer := ' - Delete data Time: ' || diff_t ||' second.';
+	     utl_file.put_line(fhandle, buffer, TRUE);  
+            
+            --delete /*+ parallel(BF_EVT_DEP_SAP_2012 8) */ from BF_EVT_DEP_SAP_2012 where sa_tx_dt <= '2012-01-04';
+            --commit;
+                         
+            ----------------------------  
+            -- begin insert time          
+            ----------------------------  
+            select sysdate into t1 from dual;   
+            insert /*+ parallel(BF_EVT_DEP_SAP_2012 8) */  into BF_EVT_DEP_SAP_2012 select * from  deldata2;
+            -- end time
+            select sysdate into t2 from dual;
+        
+            -- calculating the delete data time
+            select round((t2-t1)*86400,2) into diff_t from dual;	
+            buffer := ' - Insert data Time: ' || diff_t || ' second.';
+            utl_file.put_line(fhandle, buffer, TRUE);  
+            
+            -------------------------- 
+            -- begin truncate backup table time      
+            -------------------------- 
+            select sysdate into t1 from dual;               
+            --execute immediate 'truncate table deldata2';
+            commit;
+            -- calculating the delete data time
+            select round((t2-t1)*86400,2) into diff_t from dual;	
+            buffer := ' - Truncate backup table Time: ' || diff_t || ' second.';
+            utl_file.put_line(fhandle, buffer, TRUE);  
+        
+            -------------------------- 
+            -- begin refresh time      
+            -------------------------- 
+            select sysdate into t1 from dual;
+        
+            -- MView Fast Refresh    
+            dbms_mview.refresh@link_slave('MV_BF_EVT_DEP_SAP_2012','F',parallelism => 8);
+         
+            -- end time
+            select sysdate into t2 from dual;
+      
+            -- calculating the diff time
+            select round((t2-t1)*86400,2) into diff_t from dual;	
+            buffer := ' - Fast Refresh Time: ' || diff_t || ' second.' || chr(10) || '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'|| chr(10) || chr(10);
+            utl_file.put_line(fhandle, buffer, TRUE);
+            v_record := v_record + 100;
+        
+         end loop;   
+    
+  end loop;
+
+end;
+/
