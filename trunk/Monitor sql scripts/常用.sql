@@ -364,3 +364,7 @@ AND    t.xidusn = r.usn
 AND    rs.segment_id = t.xidusn
 ORDER BY t.used_ublk DESC;
 
+
+
+select sid, serial#, username, machine ,module, event, status from v$session  
+where username is not null and status = 'ACTIVE' order by username;
