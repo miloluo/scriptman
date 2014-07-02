@@ -1,0 +1,41 @@
+select tablespace_name,current_users,total_blocks,used_blocks,free_blocks from v$sort_segment;
+
+SET LINES 140
+col username FOR a10
+col osuser FOR a15
+col sql_text FOR a70
+col tablespace_name FOR a10
+SELECT a.username,
+        a.sid,
+        a.serial#,
+        a.osuser,
+        a.machine,
+        b.tablespace,
+        b.blocks,
+        c.sql_text
+  FROM v$session a, v$tempseg_usage b, v$sqlarea c
+WHERE a.saddr = b.session_addr
+    AND c.address = a.sql_address
+    AND c.hash_value = a.sql_hash_value
+  ORDER BY b.tablespace, b.blocks
+/
+
+
+
+-- 查询谁在使用temp
+set lines 200;
+col username for a15;
+SELECT SE.USERNAME,
+       SE.SID,
+       SE.SERIAL#,
+       SU.EXTENTS,
+       SU.BLOCKS * TO_NUMBER(RTRIM(P.VALUE)) AS SPACE,
+       TABLESPACE,
+       SEGTYPE,
+       SQL_TEXT
+  FROM V$SORT_USAGE SU, V$PARAMETER P, V$SESSION SE, V$SQL S
+WHERE P.NAME = 'db_block_size'
+   AND SU.SESSION_ADDR = SE.SADDR
+   AND S.ADDRESS = SU.SQLADDR;
+
+
