@@ -25,10 +25,14 @@
 ----        Add more for CCB info. (Milo)
 ----
 ---- v0.1.9 Reformat SQL format(Milo)
-----        Add part 2.9 other info part for special check(Milo
+----        Add part 1.9 other info part for special check(Milo)
 ----        Remove some unused 
 ----
+---- v0.2.0 Add some sql queries, when join ht horizon for health check, still need more debuging(Milo)
 ----
+---- v0.2.1 Add more check point on auto gather stats job-10g,11g(Milo) 
+----
+---------------------------------------------------------------------------------------------------------------
 
 
 
@@ -434,7 +438,7 @@ COL file_id FOR 999999;
 ORDER BY AUTOEXTENSIBLE, TABLESPACE_NAME;
 
 
--- Add from v0.1.9
+-- Add from v0.1.9, modify on v0.2.1(add order by type)
 ---- tablespaces' attributes
 SELECT status,
        tablespace_name name,
@@ -443,7 +447,8 @@ SELECT status,
        EXTENT_MANAGEMENT,
        block_size,
        allocation_type
-  FROM dba_tablespaces;
+  FROM dba_tablespaces
+order by type;
 
 
 -- Check availabe space of each tablespace
@@ -507,6 +512,12 @@ ORDER BY 4;
          BIGFILE
     FROM DBA_TABLESPACES
 ORDER BY CONTENTS, LOGGING;
+
+-- added from v0.2.0, check file online status
+set lines 200;
+select online_status,RELATIVE_FNO, file_id, tablespace_name, file_name, autoextensible
+from dba_data_files order by tablespace_name, file_name, online_status;
+
  
 -- Add from v0.1.8
 -- Each datafile used info
@@ -537,7 +548,17 @@ COL file_name FOR a45;
    WHERE T.FILE_ID = F.FILE_ID
 ORDER BY FILE_ID;
 
-
+-- Add from v0.2.1
+-- Each tempfile used info
+set lines 200;
+SET LINESIZE 200;
+COL tablespace_name FOR a20;
+COL tempfile_name FOR a45;
+select a.file_id, a.file_name tempfile_name, a.tablespace_name, 
+       a.bytes/1024/1024 total_mb, b.bytes_used/1024/1024 used_mb, 
+       round(b.bytes_used/a.bytes,0) "used(%)", a.autoextensible 
+from dba_temp_files a, v$temp_space_header b
+order by a.tablespace_name;
 
 
 -- ########################################################
@@ -590,23 +611,6 @@ COL "MB" FOR 999,999,999;
 ORDER BY group#, members;
 
 
--- Check switch time of redo log
----- Statistik the frequency,normally is close to 20mins ~ 30mins, only fetch recently 500 items for most
----- v0.1.9 limit recently 500 lines switch log 
-
-ALTER SESSION SET nls_date_format='yyyy-mm-dd hh24:mi:ss';
-COL thread# FOR 9999;
-COL sequence# FOR 999999;
-
-SELECT *
-  FROM (  SELECT thread#,
-                 sequence#,
-                 first_time,
-                 resetlogs_time
-            FROM v$log_history
-           WHERE first_time > SYSDATE - 8
-        ORDER BY resetlogs_time DESC, thread# DESC, sequence# DESC)
- WHERE ROWNUM <= 500;
 
 
 -- Check controlfile status
@@ -639,7 +643,7 @@ SET LINES 200;
 COL owner FOR a20;
 COL index_name FOR a20;
 COL index_type FOR a15;
-COL table_name FOR a20;
+COL table_name FOR a40;
 COL status FOR a10;
 COL degree FOR a10;
 
@@ -692,7 +696,7 @@ SET LINESIZE 200;
 COL owner FOR a20;
 COL CONSTRAINT_NAME FOR a30;
 COL CONSTRAINT_TYPE FOR a15;
-COL TABLE_NAME FOR a20;
+COL TABLE_NAME FOR a40;
 
 SELECT OWNER,
        CONSTRAINT_NAME,
@@ -723,9 +727,76 @@ SELECT OWNER, TRIGGER_NAME, TRIGGER_TYPE
 GROUP BY INST_ID;
 
 
+-- added from v0.2.0, check session status count
+col status for a10;
+select inst_id, status, count(*) from gv$session
+group by inst_id, status
+order by inst_id, status;
+
+
+-- added from v0.2.1
+select user_id, username, default_tablespace, temporary_tablespace, to_char(created, 'yyyymmdd hh24:mi:ss') created, profile
+from dba_users
+order by default_tablespace; 
+
+-- added from v0.2.0, check in each schema , how many objects are resides on system tablespaces
+select owner, count(*) obj_cnt from dba_segments
+where tablespace_name ='SYSTEM'
+group by owner;
+
+
+
 -- ########################################################
 -- Part 2.5 Database Performance Check
 -- ########################################################
+
+
+-- Check switch time of redo log
+---- Statistik the frequency,normally is close to 20mins ~ 30mins, only fetch recently 500 items for most
+---- v0.1.9 limit recently 500 lines switch log 
+
+ALTER SESSION SET nls_date_format='yyyy-mm-dd hh24:mi:ss';
+COL thread# FOR 9999;
+COL sequence# FOR 999999;
+
+SELECT *
+  FROM (  SELECT thread#,
+                 sequence#,
+                 first_time,
+                 resetlogs_time
+            FROM v$log_history
+           WHERE first_time > SYSDATE - 8
+        ORDER BY resetlogs_time DESC, thread# DESC, sequence# DESC)
+ WHERE ROWNUM <= 500;
+
+
+-- added from v0.2.0, per hour switch statistics  
+-- for the all instances
+COL HOUR FORMAT a4;
+COL TOTAL FORMAT 999;
+col th# format 999;
+SELECT  TO_CHAR(FIRST_TIME,'YYYY-MM-DD') DAY,
+TO_CHAR(FIRST_TIME,'HH24') HOUR,
+COUNT(*) TOTAL
+FROM V$LOG_HISTORY
+GROUP BY TO_CHAR(FIRST_TIME,'YYYY-MM-DD'),TO_CHAR(FIRST_TIME,'HH24')
+ORDER BY TO_CHAR(FIRST_TIME,'YYYY-MM-DD'),TO_CHAR(FIRST_TIME,'HH24') ASC;
+
+
+-- added from v0.2.0, per hour switch statistics
+-- modified at v0.2.1, add thread for both nodes
+COL DAY FORMAT a15;
+COL HOUR FORMAT a4;
+COL TOTAL FORMAT 999;
+col th# format 999;
+SELECT thread# th#, TO_CHAR(FIRST_TIME,'YYYY-MM-DD') DAY,
+TO_CHAR(FIRST_TIME,'HH24') HOUR,
+COUNT(*) TOTAL
+FROM V$LOG_HISTORY
+GROUP BY thread#, TO_CHAR(FIRST_TIME,'YYYY-MM-DD'),TO_CHAR(FIRST_TIME,'HH24')
+ORDER BY thread#, TO_CHAR(FIRST_TIME,'YYYY-MM-DD'),TO_CHAR(FIRST_TIME,'HH24') ASC;
+
+
 
 
 -- Check Buffer Cache hit ratio
@@ -871,47 +942,41 @@ ORDER BY s.address, s.piece;
 
 
 
--- Add from v0.1.8
--- Check Auto collect statistics
----- Check if the gather stats job is enabled
----- for 10g
+---- Add from v0.1.8
+---- Check Auto collect statistics
+---- For 10g, Check if the gather stats job is enabled
 SET LINESIZE 200;
 COL JOB_ACTION FOR A20;
-
 SELECT owner,
        job_name,
        job_action,
        enabled,
        state
   FROM dba_scheduler_jobs
- WHERE job_name = 'GATHER_STATS_JOB' OR job_name='BSLN_MAINTAIN_STATS_JOB';
- 
----- for 11g
-SELECT client_name, status FROM dba_autotask_client;
+ WHERE job_name = 'GATHER_STATS_JOB';
 
-SET LINES 200;
-COL window_name FOR a20;
-COL client_name FOR a40;
+---- Added at v0.2.1
+---- For 10g gather_stats_job runing details 
+set lines 200;
+col owner for a6;
+col job_name for a20;
+col status for a15;
+col additional_info for a20
+col run_duration for a10;
+col instance_id for 99;
+col session_id for a10;
+select to_char(log_date,'yyyymmdd hh24:mi:ss') log_date, instance_id, session_id, owner, job_name, status, error#, additional_info
+from dba_scheduler_job_run_details where job_name='GATHER_STATS_JOB'
+order by log_id;
 
-SELECT client_name,
-       window_name,
-       jobs_created,
-       jobs_started,
-       jobs_completed
-  FROM dba_autotask_client_history
- WHERE client_name LIKE '%stats%';
- 
-  
-
--- Add from v0.1.8
+---- Add from v0.1.8
 ---- Check the latest gather stats job running status
----- for 10g
+---- For 10g
 SET LINESIZE 200;
 COL job_name FOR a20;
 COL status FOR a15;
 COL start_date FOR a25;
 COL log_date FOR a25;
-
   SELECT log_id,
          job_name,
          status,
@@ -920,10 +985,65 @@ COL log_date FOR a25;
     FROM dba_scheduler_job_run_details
    WHERE job_name = 'GATHER_STATS_JOB'
 ORDER BY 4;
+ 
+---- Add from v0.2.1
+---- Check gather stats windows
+---- For 10g 
+set lines 200;
+break on WINDOW_GROUP_NAME skip 1 on WINDOW_NAME;
+select * from dba_scheduler_wingroup_members 
+where window_group_name='MAINTENANCE_WINDOW_GROUP';
+ 
+ 
+---- Added at v0.2.1
+---- for 11g, Check if the gather stats job is enabled
+SELECT client_name, status FROM dba_autotask_client;
 
------ for 11g
+---- Added at v0.2.1
+---- For 11g auto stats runing details summary 
+SET LINES 200;
+COL window_name FOR a20;
+COL client_name FOR a40;
+SELECT client_name,
+       window_name,
+       jobs_created,
+       jobs_started,
+       jobs_completed
+  FROM dba_autotask_client_history
+ WHERE client_name LIKE '%stats%';
+ 
+ 
+----- Added at v0.2.1
+----- For 11g, client name(auto optimizer stats collection), auto statistics collection
+set lines 200;
+col client_name for a40;
+col job_name for a25;
+col window_name for a20;
+col job_status for a15;
+col job_duration for a15;
+select client_name, job_name, window_name, to_char(window_start_time,'yyyymmdd hh24:mi:ss') window_start_time, 
+       job_duration, job_status, job_error from DBA_AUTOTASK_JOB_HISTORY
+where client_name='auto optimizer stats collection'
+order by client_name, window_start_time ;
 
+ 
+---- Add from v0.2.1
+---- Check gather stats windows
+---- For 11g 
+set lines 200;
+break on window_group_name skip 1 on window_name;
+select * from dba_scheduler_wingroup_members
+where window_group_name='ORA$AT_WGRP_OS';
 
+---- Add from v0.2.1
+---- Check windows time
+set lines 200;
+col window_name for a20;
+col repeat_interval for a70;
+col duration for a15;
+col comments for a45;
+select window_name, repeat_interval, duration, enabled, comments 
+from dba_scheduler_windows;  
 
 
 -- Add from v0.1.9
@@ -998,7 +1118,26 @@ SELECT file#,
   FROM v$datafile_header;  
   
   
+-- Added from v0.2.1
+select file_id, block_id, owner, segment_name, tablespace_name, status from dba_rollback_segs;
+
+-- Added from v0.2.1
+select * from v$rollname;
+
+-- Added from v0.2.0, check rollback segments status
+select d.segment_name,
+       r.status,
+       initial_extent,
+       next_extent,
+       r.rssize,
+       r.extents 
+  from v$rollstat r,
+     dba_rollback_segs d,
+     v$rollname n
+  where n.name = d.segment_name and n.usn = r.usn;
  
+-- Added from v0.2.1
+select * from v$recover_file;
 
 
 -- ########################################################
@@ -1013,9 +1152,12 @@ SELECT * FROM v$resource_limit;
 
 
 -- Check history resource limit
-  SELECT *
-    FROM DBA_HIST_RESOURCE_LIMIT
-ORDER BY snap_id;
+-- modify at v0.2.1, add snapshot time for easy reading
+select to_char(begin_interval_time,'yyyymmdd hh24:mi:ss') begin_time, to_char(end_interval_time,'yyyymmdd hh24:mi:ss') end_time,  b.*
+from dba_hist_snapshot a, dba_hist_resource_limit b
+where a.snap_id=b.snap_id
+order by 2; 
+
 
 
 
@@ -1047,12 +1189,12 @@ show parameter audit;
 
 -- Add from v0.1.8
 ---- User and their profile and granted role
-COL username FOR a15;
+COL username FOR a25;
 COL account_status FOR a20;
 COL default_tablespace FOR a20;
 COL temporary_tablespace FOR a22;
 COL profile FOR a20;
-COL granted_role FOR a25;
+COL granted_role FOR a35;
 BREAK ON username SKIP 1 ON account_status ON default_tablespace ON temporary_tablespace ON profile;
 
   SELECT username,
@@ -1139,7 +1281,24 @@ SELECT a.ksppinm name, b.ksppstvl VALUE, a.ksppdesc description
  WHERE a.indx = b.indx
        AND a.ksppinm = '_external_scn_rejection_threshold_hours';
 
+-- Add from v0.2.1
+---- Check if internal parameter.
+ 
+SET LINESIZE 200;
+COL name FOR a40;
+COL value FOR a10;
+COL description FOR a50;
+
+SELECT a.ksppinm name, b.ksppstvl VALUE, a.ksppdesc description
+  FROM x$ksppi a, x$ksppcv b
+ WHERE a.indx = b.indx;
   
+
+-- #######################################################
+-- New Added Part: 
+-- #######################################################
+
+
 
 
 -- #######################################################
@@ -1153,3 +1312,4 @@ SELECT a.ksppinm name, b.ksppstvl VALUE, a.ksppdesc description
 #-- ##################################################################################
 
 exit;
+
