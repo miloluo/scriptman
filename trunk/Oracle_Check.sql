@@ -1119,6 +1119,7 @@ SELECT file#,
   
   
 -- Added from v0.2.1
+col status for a8;
 select file_id, block_id, owner, segment_name, tablespace_name, status from dba_rollback_segs;
 
 -- Added from v0.2.1
