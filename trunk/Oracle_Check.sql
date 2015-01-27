@@ -32,6 +32,7 @@
 ----
 ---- v0.2.1 Add more check point on auto gather stats job-10g,11g(Milo) 
 ----
+---- v0.2.2 Add more rman backup check.(Milo)
 ---------------------------------------------------------------------------------------------------------------
 
 
@@ -1078,6 +1079,193 @@ ALTER SESSION SET nls_date_format='yyyy-mm-dd hh24:mi:ss';
          comments
     FROM v$backup_piece_details
 ORDER BY start_time;
+
+
+-- rman backup jobs
+-- added from v0.2.2
+set lines 200;
+set pages 200;
+col ELAPSED_TIME for a20;
+col INPUT_SIZE for a10;
+col OUTPUT_SIZE for a10;
+col OUTPUT_RATE_PER_SEC for a20;
+SELECT
+  r.command_id                                                                              backup_name
+  , TO_CHAR(r.start_time, 'mm/dd/yyyy HH24:MI:SS')                                          start_time
+  , r.time_taken_display                                                                    elapsed_time
+  , DECODE(   r.status
+            , 'COMPLETED'
+            , r.status 
+            , 'RUNNING'
+            , r.status 
+            , 'FAILED'
+            , r.status
+            , r.status 
+    )                                                                                       status
+  , r.input_type                                                                            input_type
+  , r.output_device_type                                                                    output_device_type
+  , r.input_bytes_display                                                                   input_size
+  , r.output_bytes_display                                                                  output_size
+  , r.output_bytes_per_sec_display                                                          output_rate_per_sec
+FROM
+    (select
+         command_id
+       , start_time
+       , time_taken_display
+       , status
+       , input_type
+       , output_device_type
+       , input_bytes_display
+       , output_bytes_display
+       , output_bytes_per_sec_display
+     from v$rman_backup_job_details
+     order by start_time DESC
+    ) r
+WHERE
+    rownum < 50; 
+
+
+-- rman backup set
+-- added from v0.2.2
+set lines 200;
+col tag for a20;
+col dev_type for a10;
+SELECT
+    bs.recid                                                                                                  bs_key
+  , DECODE(backup_type
+           , 'L', 'Archived Redo Logs'
+           , 'D', 'Datafile Full Backup'
+           , 'I', 'Incremental Backup')                                                                       backup_type
+  , device_type                                                                                               dev_type
+  , DECODE(bs.controlfile_included, 'NO', '-', bs.controlfile_included)                                       controlfile_included
+  , NVL(sp.spfile_included, '-')                                                                              spfile_included
+  , bs.incremental_level                                                                                      incremental_level
+  , bs.pieces                                                                                                 pieces
+  , TO_CHAR(bs.start_time, 'mm/dd/yyyy HH24:MI:SS')                                                           start_time
+  , TO_CHAR(bs.completion_time, 'mm/dd/yyyy HH24:MI:SS')                                                      completion_time
+  , bs.elapsed_seconds                                                                                        elap_sec
+  , bp.tag                                                                                                    tag
+  , bs.block_size                                                                                             block_size
+  , bs.keep                                                                                                   keep
+  , TO_CHAR(bs.keep_until, 'mm/dd/yyyy HH24:MI:SS')                                                           keep_until
+  , bs.keep_options                                                                                           keep_options
+FROM
+    v$backup_set                           bs
+  , (select distinct
+         set_stamp
+       , set_count
+       , tag
+       , device_type
+     from v$backup_piece
+     where status in ('A', 'X'))           bp
+ ,  (select distinct set_stamp, set_count, 'YES' spfile_included
+     from v$backup_spfile)                 sp
+WHERE
+      bs.set_stamp = bp.set_stamp
+  AND bs.set_count = bp.set_count
+  AND bs.set_stamp = sp.set_stamp (+)
+  AND bs.set_count = sp.set_count (+)
+ORDER BY
+    bs.recid;
+    
+    
+-- rman backup piece
+-- added from v0.2.2
+set lines 200;
+col handle for a60;
+SELECT
+   bs.recid                                                                                            bs_key
+  , bp.piece#                                                                                          piece#
+  , bp.copy#                                                                                           copy#
+  , bp.recid                                                                                           bp_key
+  , DECODE(   status
+            , 'A', 'Available'
+            , 'D', 'Deleted'
+            , 'X', 'Expired')     status
+  , handle                                                                                             handle
+  , TO_CHAR(bp.start_time, 'yyyy-mm-dd HH24:MI:SS')                                                    start_time
+  , TO_CHAR(bp.completion_time, 'yyyy-mm-dd HH24:MI:SS')                                               completion_time
+  , bp.elapsed_seconds                                                                                 elapsed_seconds
+FROM
+    v$backup_set    bs
+  , v$backup_piece  bp
+WHERE
+      bs.set_stamp = bp.set_stamp
+  AND bs.set_count = bp.set_count
+  AND bp.status IN ('A', 'X')
+ORDER BY
+    bs.recid
+  , piece#;
+  
+-- spfile backup info
+-- added from v0.2.2
+SELECT
+   bs.recid                                                                                         bs_key
+  , bp.piece#                                                                                       piece#
+  , bp.copy#                                                                                        copy#
+  , bp.recid                                                                                        bp_key
+  , 
+    NVL(sp.spfile_included, '-')                                                                    spfile_included
+  , DECODE(   status
+            , 'A', 'Available'
+            , 'D', 'Deleted'
+            , 'X', 'Expired')  status
+  , handle                                                                                          handle
+FROM
+    v$backup_set                            bs
+  , v$backup_piece                          bp
+  ,  (select distinct set_stamp, set_count, 'YES' spfile_included
+      from v$backup_spfile)                 sp
+WHERE
+      bs.set_stamp = bp.set_stamp
+  AND bs.set_count = bp.set_count
+  AND bp.status IN ('A', 'X')
+  AND bs.set_stamp = sp.set_stamp
+  AND bs.set_count = sp.set_count
+ORDER BY
+    bs.recid
+  , piece#;
+      
+      
+-- controlfile backup info
+-- added from v0.2.2
+SELECT
+    bs.recid                                                                                        bs_key
+  , bp.piece#                                                                                       piece#
+  , bp.copy#                                                                                        copy#
+  , bp.recid                                                                                        bp_key
+  , DECODE(bs.controlfile_included, 'NO', '-', bs.controlfile_included)                             controlfile_included
+  , DECODE(   status
+            , 'A', 'Available'
+            , 'D', 'Deleted'
+            , 'X', 'Expired')  status
+  , handle                                                                                          handle
+FROM
+    v$backup_set    bs
+  , v$backup_piece  bp
+WHERE
+      bs.set_stamp = bp.set_stamp
+  AND bs.set_count = bp.set_count
+  AND bp.status IN ('A', 'X')
+  AND bs.controlfile_included != 'NO'
+ORDER BY
+    bs.recid
+  , piece#;          
+  
+-- rman configuration  
+-- added from v0.2.2 
+set lines 200;
+col name for a40;
+col value for a60;      
+SELECT
+    name 
+  , value
+FROM
+    v$rman_configuration
+ORDER BY
+    name;      
+    
+
 
 -- Add from v0.1.8
 -- Recover file status
